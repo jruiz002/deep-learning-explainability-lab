@@ -80,3 +80,24 @@ def fig_duplicate(run, out: Path) -> Path:
     ax.set_ylim(0, 1.35 * max(t["configs"][c]["mean_abs_sum"] for c in labels))
     ax.legend(frameon=False, fontsize=7, ncol=2, loc="upper center")
     return _save(fig, out)
+
+
+def fig_kernel(run, out: Path) -> Path:
+    rows = run.results["t2_4"]["by_background"]
+    ks = [r["k"] for r in rows]
+    fig, axes = plt.subplots(1, 2, figsize=(9, 3.6))
+    axes[0].plot(ks, [r["mae"] for r in rows], "o-", color=ACCENT)
+    axes[0].set_xlabel("tamaño del fondo k")
+    axes[0].set_ylabel("MAE contra TreeSHAP (log-odds)")
+    axes[0].set_xscale("log")
+    axes[0].set_xticks(ks, [str(k) for k in ks])
+    axes[1].plot(ks, [r["time_kernel_s"] for r in rows], "o-", color=ORANGE, label="KernelSHAP")
+    axes[1].plot(ks, [r["time_tree_s"] for r in rows], "s-", color=ACCENT, label="TreeSHAP")
+    axes[1].set_xscale("log")
+    axes[1].set_yscale("log")
+    axes[1].set_xticks(ks, [str(k) for k in ks])
+    axes[1].set_xlabel("tamaño del fondo k")
+    axes[1].set_ylabel(f"tiempo para {run.results['t2_4']['n_instances']} instancias (s)")
+    axes[1].legend(frameon=False)
+    fig.tight_layout()
+    return _save(fig, out)

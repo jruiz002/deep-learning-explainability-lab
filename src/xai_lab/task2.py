@@ -163,5 +163,39 @@ def run_task2(seed: int = config.SEED) -> Task2Run:
         "configs": cfg,
     }
 
+    # ---- 2.4 ------------------------------------------------------------------------------
+    Xk = X_test.iloc[: config.KERNEL_N_INSTANCES]
+    kern = []
+    for k in config.BACKGROUND_SIZES_KERNEL:
+        bgk = bg.iloc[:k]
+        counter = {"n": 0}
+        base_f = _frame_f(model, names)
+
+        def f_counted(A, _c=counter, _f=base_f):
+            _c["n"] += len(A)
+            return _f(A)
+
+        ke = shap.KernelExplainer(f_counted, bgk.to_numpy())
+        counter["n"] = 0
+        np.random.seed(seed)  # KernelExplainer draws its coalitions from the global NumPy state
+        t0 = time.perf_counter()
+        phi_k = np.asarray(ke.shap_values(Xk.to_numpy(), nsamples=config.KERNEL_NSAMPLES, silent=True))
+        t_kernel = time.perf_counter() - t0
+        te = shap.TreeExplainer(model, data=bgk, feature_perturbation="interventional", model_output="raw")
+        t0 = time.perf_counter()
+        phi_t = np.asarray(te.shap_values(Xk, check_additivity=False))
+        t_tree = time.perf_counter() - t0
+        n_inst = len(Xk)
+        kern.append({
+            "k": k, "mae": float(np.abs(phi_k - phi_t).mean()), "max_abs_error": float(np.abs(phi_k - phi_t).max()),
+            "time_kernel_s": t_kernel, "time_tree_s": t_tree,
+            "time_kernel_per_instance_s": t_kernel / n_inst,
+            "model_evaluations": int(counter["n"]), "evaluations_nominal": config.KERNEL_NSAMPLES * k * n_inst,
+            "evaluations_per_instance": counter["n"] / n_inst,
+            "time_per_evaluation_us": 1e6 * t_kernel / counter["n"],
+            "speedup_tree_vs_kernel": t_kernel / t_tree,
+        })
+    res["t2_4"] = {"n_instances": len(Xk), "nsamples": config.KERNEL_NSAMPLES, "by_background": kern}
+
     res["elapsed_s"] = time.perf_counter() - t_start
     return Task2Run(res, extra)
