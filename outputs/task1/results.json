@@ -1,0 +1,257 @@
+{
+  "environment": {
+    "seed": 42,
+    "torch": "2.14.1",
+    "torchvision": "0.29.1",
+    "python": "3.11.2",
+    "Z": 49
+  },
+  "images": {
+    "a": {
+      "file": "a_golden_retriever.jpg",
+      "source": "https://commons.wikimedia.org/wiki/File:Callie_the_golden_retriever_puppy.jpg",
+      "author": "MichaelMcPhee (Wikimedia Commons)",
+      "license": "CC BY 3.0",
+      "t1_1_top5": [
+        {
+          "class": "golden retriever",
+          "index": 207,
+          "probability": 0.9947874546051025
+        },
+        {
+          "class": "Tibetan mastiff",
+          "index": 244,
+          "probability": 0.0015608250396326184
+        },
+        {
+          "class": "cocker spaniel",
+          "index": 219,
+          "probability": 0.0008095246157608926
+        },
+        {
+          "class": "Saluki",
+          "index": 176,
+          "probability": 0.0007092274609021842
+        },
+        {
+          "class": "Labrador retriever",
+          "index": 208,
+          "probability": 0.0005271551199257374
+        }
+      ],
+      "bbox_original": null,
+      "bbox_224": null,
+      "t1_2_classes": [
+        "golden retriever (#207)"
+      ],
+      "t1_2_peaks": {
+        "golden retriever (#207)": [
+          111,
+          48
+        ]
+      },
+      "t1_3": {
+        "class": "golden retriever (#207)",
+        "logit": 18.294334411621094,
+        "logit_from_cam": 18.294336318969727,
+        "abs_error_logit": 1.9073486328125e-06,
+        "max_abs_error_ZL_vs_M": 1.1444091796875e-05,
+        "max_abs_error_normalised": 4.172325134277344e-07
+      },
+      "t1_4a": [
+        {
+          "channel": 28,
+          "w": 0.28886300325393677,
+          "alpha": 0.005895162932574749,
+          "w_over_Z": 0.005895163331712995,
+          "abs_error": 3.9913824589205005e-10,
+          "rel_error": 6.770605383312933e-08
+        },
+        {
+          "channel": 242,
+          "w": 0.2556387782096863,
+          "alpha": 0.005217117723077536,
+          "w_over_Z": 0.005217117922646659,
+          "abs_error": 1.995691233797059e-10,
+          "rel_error": 3.825275302162691e-08
+        },
+        {
+          "channel": 156,
+          "w": 0.24621407687664032,
+          "alpha": 0.0050247772596776485,
+          "w_over_Z": 0.005024777079115109,
+          "abs_error": 1.8056253974635394e-10,
+          "rel_error": 3.593443786727192e-08
+        },
+        {
+          "channel": 473,
+          "w": 0.2234017699956894,
+          "alpha": 0.004559219814836979,
+          "w_over_Z": 0.004559219795830396,
+          "abs_error": 1.900658276599021e-11,
+          "rel_error": 4.168823530590157e-09
+        },
+        {
+          "channel": 497,
+          "w": 0.21001848578453064,
+          "alpha": 0.004286091774702072,
+          "w_over_Z": 0.004286091546623075,
+          "abs_error": 2.280789975286912e-10,
+          "rel_error": 5.321374848103514e-08
+        }
+      ]
+    },
+    "b": {
+      "file": "b_cat_and_dog.jpg",
+      "source": "https://commons.wikimedia.org/wiki/File:Cute_cat_and_dog_1.jpg",
+      "author": "S. J. Pyrotechnic (Wikimedia Commons)",
+      "license": "CC BY-SA 2.0",
+      "t1_1_top5": [
+        {
+          "class": "Chihuahua",
+          "index": 151,
+          "probability": 0.4448765516281128
+        },
+        {
+          "class": "tabby",
+          "index": 281,
+          "probability": 0.13352267444133759
+        },
+        {
+          "class": "French bulldog",
+          "index": 245,
+          "probability": 0.12302855402231216
+        },
+        {
+          "class": "Egyptian cat",
+          "index": 285,
+          "probability": 0.05246470496058464
+        },
+        {
+          "class": "tiger cat",
+          "index": 282,
+          "probability": 0.03950243815779686
+        }
+      ],
+      "bbox_original": null,
+      "bbox_224": null,
+      "t1_2_classes": [
+        "Chihuahua (#151)",
+        "tabby (#281)"
+      ],
+      "t1_2_peaks": {
+        "Chihuahua (#151)": [
+          48,
+          48
+        ],
+        "tabby (#281)": [
+          175,
+          48
+        ]
+      },
+      "t1_3": {
+        "class": "Chihuahua (#151)",
+        "logit": 11.057705879211426,
+        "logit_from_cam": 11.05770492553711,
+        "abs_error_logit": 9.5367431640625e-07,
+        "max_abs_error_ZL_vs_M": 7.62939453125e-06,
+        "max_abs_error_normalised": 2.384185791015625e-07
+      },
+      "t1_4b": {
+        "class1": "Chihuahua (#151)",
+        "class2": "tabby (#281)",
+        "probabilities": {
+          "Chihuahua (#151)": 0.4448765516281128,
+          "tabby (#281)": 0.13352267444133759
+        },
+        "iou_top20": 0.00034890096196979513,
+        "pixels_per_mask": 10035,
+        "intersection": 7,
+        "union": 20063
+      }
+    },
+    "c": {
+      "file": "c_sailboat_on_trailer.jpg",
+      "source": "https://commons.wikimedia.org/wiki/File:Catalina_22_sailboat_on_a_trailer.jpg",
+      "author": "Jwkane (Wikimedia Commons)",
+      "license": "CC BY-SA 3.0",
+      "t1_1_top5": [
+        {
+          "class": "trimaran",
+          "index": 871,
+          "probability": 0.205439954996109
+        },
+        {
+          "class": "catamaran",
+          "index": 484,
+          "probability": 0.17905792593955994
+        },
+        {
+          "class": "projectile",
+          "index": 744,
+          "probability": 0.09699106216430664
+        },
+        {
+          "class": "missile",
+          "index": 657,
+          "probability": 0.08626316487789154
+        },
+        {
+          "class": "amphibian",
+          "index": 408,
+          "probability": 0.06536353379487991
+        }
+      ],
+      "bbox_original": [
+        135,
+        150,
+        880,
+        450
+      ],
+      "bbox_224": [
+        0.0,
+        37.333333333333336,
+        224.0,
+        144.0
+      ],
+      "t1_2_classes": [
+        "trimaran (#871)"
+      ],
+      "t1_2_peaks": {
+        "trimaran (#871)": [
+          80,
+          175
+        ]
+      },
+      "t1_3": {
+        "class": "trimaran (#871)",
+        "logit": 10.640809059143066,
+        "logit_from_cam": 10.64080810546875,
+        "abs_error_logit": 9.5367431640625e-07,
+        "max_abs_error_ZL_vs_M": 5.7220458984375e-06,
+        "max_abs_error_normalised": 1.7881393432617188e-07
+      },
+      "t1_4c": {
+        "bbox_224": [
+          0.0,
+          37.333333333333336,
+          224.0,
+          144.0
+        ],
+        "box_area_fraction": 0.4776785671710968,
+        "mass_in_box": 0.7062812582334697,
+        "class_idx": 871,
+        "class_name": "trimaran",
+        "p_original": 0.205439954996109,
+        "p_background_gray": 0.0370960459113121,
+        "delta_background_gray": -0.1683439090847969,
+        "p_object_gray": 0.00020760094048455358,
+        "delta_object_gray": -0.20523235405562446,
+        "top1_after_background_gray": {
+          "name": "catamaran",
+          "probability": 0.7662856578826904
+        }
+      }
+    }
+  }
+}
