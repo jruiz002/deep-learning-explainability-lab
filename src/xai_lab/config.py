@@ -31,3 +31,29 @@ FIGURES_DIR = OUTPUT_DIR / "figures"
 # Numerical tolerances for the self-checks printed at the end of a run (float32 arithmetic).
 TOL_ABS = 1e-4  # logit decomposition, Z*L = M and normalised-map comparisons
 TOL_REL = 1e-5  # alpha_k vs w_k / Z
+
+# ---- Task 2 (SHAP on German Credit) -------------------------------------------------------
+OUTPUT_DIR_T2 = ROOT / "outputs" / "task2"
+FIGURES_DIR_T2 = OUTPUT_DIR_T2 / "figures"
+
+CREDIT_TEST_SIZE = 0.2
+GBC_N_ESTIMATORS = 200
+GBC_MAX_DEPTH = 3
+BACKGROUND_SIZE = 100
+BACKGROUND_SIZES_KERNEL = (10, 50, 100)
+KERNEL_NSAMPLES = 2000
+KERNEL_N_INSTANCES = 10
+PERM_REPEATS = 10
+DUP_NOISE_SCALE = 0.05  # copy = x + 0.05 * sigma_x * eps
+SMALL_MODEL_FEATURES = (
+    "duration", "credit_amount", "installment_commitment", "residence_since", "age", "existing_credits",
+)
+SMALL_MODEL_BACKGROUND = 50
+SMALL_MODEL_INSTANCES = 5
+PROB_APPROVED, PROB_REJECTED = 0.8, 0.2  # p(good) thresholds used to pick the two clients
+PROB_DOUBTFUL_BAND = (0.45, 0.55)
+
+# Tolerances for Task 2 self-checks. TreeSHAP (C++ extension) accumulates ~1e-7 errors vs the float64 model output
+# (efficiency error observed ~1e-7), so 1e-6 leaves ~10x margin without hiding real bugs (real errors are O(1e-2)).
+TOL_SHAP = 1e-6
+TOL_SHAP_EXACT = 1e-10  # own Shapley efficiency (float64, 64 coalitions): observed error ~1e-16
