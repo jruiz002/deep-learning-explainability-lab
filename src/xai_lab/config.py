@@ -57,3 +57,19 @@ PROB_DOUBTFUL_BAND = (0.45, 0.55)
 # (efficiency error observed ~1e-7), so 1e-6 leaves ~10x margin without hiding real bugs (real errors are O(1e-2)).
 TOL_SHAP = 1e-6
 TOL_SHAP_EXACT = 1e-10  # own Shapley efficiency (float64, 64 coalitions): observed error ~1e-16
+
+# ---- Task 3 (LIME from scratch on German Credit) -------------------------------------------
+OUTPUT_DIR_T3 = ROOT / "outputs" / "task3"
+FIGURES_DIR_T3 = OUTPUT_DIR_T3 / "figures"
+
+LIME_N = 5000  # perturbed samples per explanation (3.1)
+LIME_K = 5  # variables kept in the interpretable model
+LIME_LAMBDA = 1.0  # ridge penalty (the intercept is not penalised)
+LIME_SIGMA_REL = 0.75  # kernel width = sigma_rel * sqrt(d')
+LIME_D_PRIME = 20  # reference dimension of the kernel (the 20 German Credit variables)
+LIME_STAB_N = (500, 2000, 5000)
+LIME_STAB_SIGMA_REL = (0.5, 0.75, 1.5)
+LIME_STAB_RUNS = 20  # seeds 0..19 in every cell of the grid
+LIME_STAB_TOP = 5  # how many frequent variables are stored per cell
+
+TOL_LIME = 1e-8  # closed-form ridge vs lstsq / sklearn Ridge (float64; errors are far below this)
