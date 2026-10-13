@@ -16,6 +16,7 @@ from sklearn.inspection import permutation_importance
 from sklearn.metrics import roc_auc_score
 
 from . import config, credit
+from .shapley import exact_shapley
 
 TOP_N = 5
 
@@ -196,6 +197,39 @@ def run_task2(seed: int = config.SEED) -> Task2Run:
             "speedup_tree_vs_kernel": t_kernel / t_tree,
         })
     res["t2_4"] = {"n_instances": len(Xk), "nsamples": config.KERNEL_NSAMPLES, "by_background": kern}
+
+    # ---- 2.5 ------------------------------------------------------------------------------
+    cols = list(config.SMALL_MODEL_FEATURES)
+    Xtr_s, Xte_s = sp.X_train[cols], sp.X_test[cols]
+    model_s = credit.train_gbc(Xtr_s, sp.y_train, seed)
+    bg_s = credit.background(Xtr_s, config.SMALL_MODEL_BACKGROUND, seed)
+    f_s = _frame_f(model_s, cols)
+    te_s = shap.TreeExplainer(model_s, data=bg_s, feature_perturbation="interventional", model_output="raw")
+    n_s = config.SMALL_MODEL_INSTANCES
+    own, v0s, vns = [], [], []
+    t0 = time.perf_counter()
+    for i in range(n_s):
+        ph, v0, vn = exact_shapley(f_s, Xte_s.iloc[i].to_numpy(), bg_s.to_numpy())
+        own.append(ph)
+        v0s.append(v0)
+        vns.append(vn)
+    t_own = time.perf_counter() - t0
+    own = np.array(own)
+    ref = np.asarray(te_s.shap_values(Xte_s.iloc[:n_s], check_additivity=False))
+    fx = model_s.decision_function(Xte_s.iloc[:n_s])
+    res["t2_5"] = {
+        "features": cols, "n_coalitions": 2 ** len(cols), "n_instances": n_s, "n_background": len(bg_s),
+        "test_accuracy": float(model_s.score(Xte_s, y_test)),
+        "test_auc": float(roc_auc_score(y_test, credit.proba_good(model_s, Xte_s))),
+        "max_abs_error_vs_treeshap": float(np.abs(own - ref).max()),
+        "max_efficiency_error": float(np.abs(own.sum(axis=1) - (np.array(vns) - np.array(v0s))).max()),
+        "max_vN_vs_f_error": float(np.abs(np.array(vns) - fx).max()),
+        "max_v0_vs_expected_error": float(np.abs(np.array(v0s) - float(np.ravel(te_s.expected_value)[0])).max()),
+        "time_own_s": t_own,
+        "phi_own": own.tolist(), "phi_treeshap": ref.tolist(), "v_empty": v0s, "v_full": vns,
+        "f_x": fx.tolist(),
+    }
+    extra.update(own=own, ref=ref)
 
     res["elapsed_s"] = time.perf_counter() - t_start
     return Task2Run(res, extra)

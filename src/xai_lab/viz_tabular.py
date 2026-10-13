@@ -101,3 +101,18 @@ def fig_kernel(run, out: Path) -> Path:
     axes[1].legend(frameon=False)
     fig.tight_layout()
     return _save(fig, out)
+
+
+def fig_own_vs_shap(run, out: Path) -> Path:
+    own, ref = run.extra["own"], run.extra["ref"]
+    cols = run.results["t2_5"]["features"]
+    fig, ax = plt.subplots(figsize=(4.8, 4.6))
+    for j, c in enumerate(cols):
+        ax.scatter(ref[:, j], own[:, j], s=26, label=c)
+    lim = [min(own.min(), ref.min()), max(own.max(), ref.max())]
+    ax.plot(lim, lim, color=MUTED, ls="--", lw=1)
+    ax.set_xlabel("TreeSHAP interventional ($\\phi$)")
+    ax.set_ylabel("Shapley exacto propio ($\\phi$)")
+    ax.legend(frameon=False, fontsize=7)
+    ax.set_title(f"Máx. error absoluto = {run.results['t2_5']['max_abs_error_vs_treeshap']:.1e}", fontsize=9)
+    return _save(fig, out)
