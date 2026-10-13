@@ -5,8 +5,10 @@ from __future__ import annotations
 
 import argparse
 import logging
+import sys
+import time
 
-from xai_lab import config, data, report, viz
+from xai_lab import config, console, data, report, viz
 from xai_lab.model import load_model
 from xai_lab.reproducibility import set_seed
 from xai_lab.task1 import run_task1
@@ -17,6 +19,7 @@ def main() -> None:
     ap.add_argument("--seed", type=int, default=config.SEED)
     ap.add_argument("--device", default="cpu")
     args = ap.parse_args()
+    t0 = time.perf_counter()
 
     logging.basicConfig(level=logging.WARNING, format="%(levelname)s %(message)s")
     set_seed(args.seed)
@@ -39,9 +42,10 @@ def main() -> None:
 
     report.update_readme(config.ROOT / "README.md", report.render_informe(results))
 
-    # One block per lab sub-task: what it did, what goes in the Word report, and the numbers.
-    print(report.render_console(sections))
-    print(f"\nListo. Resultados en {config.OUTPUT_DIR / 'results.md'}\nInforme actualizado en {config.ROOT / 'README.md'}")
+    figures = sorted(f.name for f in fig.glob("fig_*.png"))
+    text, all_ok = console.render_console(results, figures, args.device, time.perf_counter() - t0)
+    print(text)
+    sys.exit(0 if all_ok else 1)
 
 
 if __name__ == "__main__":

@@ -85,12 +85,11 @@ def write_json(results: dict, path: Path) -> None:
 
 @dataclass
 class Section:
-    """One lab sub-task (inciso): what the code did, what to put in Word, and the numbers."""
+    """One lab sub-task (inciso): what the code did and the numbers it produced."""
 
     task: str  # e.g. "1.4(a)"
     title: str
     what_it_does: str
-    word_items: list[str]
     lines: list[str] = field(default_factory=list)  # Markdown with the numbers
     figures: list[str] = field(default_factory=list)  # file names in outputs/task1/figures
 
@@ -120,11 +119,6 @@ def build_sections(results: dict) -> list[Section]:
         "Carga ResNet-18 con pesos de ImageNet en modo eval; preprocesa (resize 256, recorte central 224, "
         "normalización por canal); predice el top-5 de las tres imágenes (a: objeto claro, b: gato y perro, "
         "c: objeto fuera de contexto) y transforma el recuadro de (c) a coordenadas de 224x224.",
-        ["Tabla con fuente, autor y licencia de las 3 imágenes (indicar la fuente es obligatorio).",
-         "Una tabla top-5 (clase + probabilidad) por imagen.",
-         "Las coordenadas del recuadro de (c) en 224x224.",
-         "Figura fig_1_1_predictions.png.",
-         "Mencionar la semilla y las versiones de librerías."],
         lines, ["fig_1_1_predictions.png"]))
 
     # ---- Task 1.2 --------------------------------------------------------------------------
@@ -134,9 +128,6 @@ def build_sections(results: dict) -> list[Section]:
         "logit (antes del softmax); alpha_k = promedio espacial del gradiente; L = ReLU(sum alpha_k A^k), "
         "interpolación bilineal a 224x224 y normalización min-max. Mapa de la clase top-1 de cada imagen "
         "y, en (b), también el de la clase del segundo objeto.",
-        ["La figura fig_1_2_gradcam.png (mapas superpuestos a la imagen).",
-         "Una descripción breve de la implementación (hooks, logit, alpha, ReLU, bilineal, min-max).",
-         "Un comentario sobre dónde cae el mapa en cada imagen."],
         ["Mapas generados para: " + "; ".join(f"imagen ({rid}): {', '.join(it['t1_2_classes'])}"
                                               for rid, it in imgs.items()), ""],
         ["fig_1_2_gradcam.png"]))
@@ -155,10 +146,6 @@ def build_sections(results: dict) -> list[Section]:
         "1.3", "CAM directo desde los pesos de fc y verificación contra Grad-CAM",
         "(a) Calcula CAM sin gradientes; (b) verifica que (1/Z) sum M + b = logit; (c) verifica Z·L = M; "
         "(d) compara ambos mapas tras ReLU y min-max.",
-        ["Tabla del inciso (b): ambos valores y el error absoluto por imagen.",
-         "Tabla del inciso (c): error absoluto máximo por imagen.",
-         "Tabla del inciso (d): error absoluto máximo por imagen.",
-         "Figura fig_1_3_cam_vs_gradcam.png y una conclusión (coinciden hasta precisión float32)."],
         lines, ["fig_1_3_cam_vs_gradcam.png"]))
 
     # ---- Task 1.4 (a) ----------------------------------------------------------------------
@@ -166,11 +153,6 @@ def build_sections(results: dict) -> list[Section]:
     S.append(Section(
         "1.4(a)", "alpha vs w/Z (imagen a, cinco canales de mayor peso)",
         "Compara numéricamente el alpha de Grad-CAM con w^c_k / Z para los cinco canales con mayor peso en fc.",
-        ["Tabla con canal, w, alpha, w/Z y error relativo.",
-         "Explicación: dy^c/dA^k_ij = w_k/Z es igual en todas las posiciones (i, j) porque el pooling global "
-         "promedia con el mismo peso 1/Z; al promediar Z gradientes idénticos alpha = w/Z.",
-         "Explicación de por qué el error es ~1e-8 y no 0: precisión de punto flotante (float32).",
-         "Figura fig_1_4a_alpha_vs_w.png."],
         _table(["canal", "w", "alpha", "w/Z", "error absoluto", "error relativo"],
                [[str(r["channel"]), f"{r['w']:.6f}", f"{r['alpha']:.10f}", f"{r['w_over_Z']:.10f}",
                  f"{r['abs_error']:.2e}", f"{r['rel_error']:.2e}"] for r in a]),
@@ -182,11 +164,6 @@ def build_sections(results: dict) -> list[Section]:
         "1.4(b)", "IoU entre los mapas de las dos clases (imagen b)",
         "Toma el 20 % de píxeles de mayor valor de cada mapa (clase perro y clase gato) y calcula la "
         "intersección sobre la unión.",
-        ["El IoU y los conteos de píxeles (intersección, unión).",
-         "Respuesta: ¿el mapa discrimina entre las dos clases? (con el número del IoU).",
-         "Límite de resolución: cada celda 7x7 cubre 32x32 píxeles, así que objetos pequeños o cercanos "
-         "entre sí (< ~32 px) no se pueden separar ni delimitar bien.",
-         "Figura fig_1_4b_iou.png."],
         [f"- Clases: {t['class1']} vs {t['class2']}",
          f"- Probabilidades: " + ", ".join(f"{k}: {v:.4f}" for k, v in t["probabilities"].items()),
          f"- IoU del top-20 % = **{t['iou_top20']:.4f}** (intersección {t['intersection']} px, "
@@ -200,11 +177,6 @@ def build_sections(results: dict) -> list[Section]:
         "Calcula qué fracción del mapa normalizado cae dentro del recuadro y reemplaza por gris todo lo "
         "que queda fuera del recuadro para medir el cambio en la probabilidad de la clase. "
         "(Extra: control con el objeto en gris.)",
-        ["Fracción de masa dentro del recuadro (y el área del recuadro como referencia).",
-         "Probabilidad original, con fondo gris y su cambio.",
-         "Respuesta: ¿coinciden el mapa y la prueba causal en si el modelo usa el fondo? y conclusión "
-         "sobre si hay evidencia de un atajo (con los números).",
-         "Figura fig_1_4c_causal.png."],
         [f"- Clase analizada: {c['class_name']} (#{c['class_idx']})",
          f"- Fracción de masa del mapa dentro del recuadro: **{c['mass_in_box']:.4f}** "
          f"(el recuadro cubre {c['box_area_fraction']:.4f} de la imagen)",
@@ -224,21 +196,10 @@ def render_markdown(sections: list[Section], results: dict) -> str:
     L = ["# Task 1 - resultados (generado automáticamente)", "",
          f"Semilla `{env['seed']}` - torch {env['torch']} - torchvision {env['torchvision']} - Python {env['python']}", ""]
     for s in sections:
-        L += [f"## Task {s.task} - {s.title}", "", f"**Qué hace el código:** {s.what_it_does}", "",
-              "**Qué poner en el Word:**", ""] + [f"- {w}" for w in s.word_items] + [""]
+        L += [f"## Task {s.task} - {s.title}", "", f"{s.what_it_does}", ""]
         L += s.lines
         L += [f"Figuras: " + ", ".join(f"`figures/{f}`" for f in s.figures), ""]
     return "\n".join(L)
-
-
-def render_console(sections: list[Section]) -> str:
-    bar = "=" * 78
-    out: list[str] = []
-    for s in sections:
-        out += ["", bar, f" TASK {s.task} - {s.title}", bar, f"Qué hace: {s.what_it_does}", "",
-                "QUÉ PONER EN EL WORD:"] + [f"  [ ] {w}" for w in s.word_items] + ["", "RESULTADOS:"]
-        out += [ln for ln in s.lines] + ["Figuras: " + ", ".join(f"outputs/task1/figures/{f}" for f in s.figures)]
-    return "\n".join(out)
 
 
 def write_markdown(sections: list[Section], results: dict, path: Path) -> None:

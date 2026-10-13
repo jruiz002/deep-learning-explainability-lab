@@ -28,9 +28,11 @@ python -m pytest -q                # pruebas unitarias (13)
 python scripts/run_task1.py        # corre todo el Task 1
 ```
 
-Al correrlo, la consola imprime un bloque por inciso (`TASK 1.1`, `TASK 1.2`, `TASK 1.3`, `TASK 1.4(a)`, `(b)` y `(c)`)
-con lo que calcula y los números obtenidos. Las figuras quedan en `outputs/task1/figures/` y los números en
-`outputs/task1/results.json`. Tarda unos segundos en CPU. (`make setup`, `make test` y `make task1` hacen lo mismo.)
+Al correrlo, la consola imprime un reporte de ejecución con una sección por inciso (`Task 1.1`, `1.2`, `1.3`,
+`1.4(a)`, `1.4(b)` y `1.4(c)`), una tabla de **verificaciones numéricas** (OK/FALLO contra una tolerancia) y la lista de
+archivos generados. El programa termina con código de salida 1 si alguna verificación falla. Las figuras quedan en
+`outputs/task1/figures/` y los números en `outputs/task1/results.json`. Tarda unos segundos en CPU.
+(`make setup`, `make test` y `make task1` hacen lo mismo.)
 
 Estructura del código:
 
@@ -42,7 +44,7 @@ src/xai_lab/
   maps.py            ReLU/min-max, interpolación, máscara top-20 %, IoU, masa en recuadro
   causal.py          prueba causal con gris
   task1.py           los experimentos de 1.1 a 1.4
-  data.py, model.py, viz.py, report.py, config.py
+  data.py, model.py, viz.py, report.py, console.py, config.py
 scripts/run_task1.py punto de entrada
 tests/               pruebas de las identidades matemáticas, geometría y hooks
 ```

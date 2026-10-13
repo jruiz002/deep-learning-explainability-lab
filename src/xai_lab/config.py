@@ -27,3 +27,7 @@ IMAGES_DIR = DATA_DIR / "images"
 MANIFEST_PATH = DATA_DIR / "images.json"
 OUTPUT_DIR = ROOT / "outputs" / "task1"
 FIGURES_DIR = OUTPUT_DIR / "figures"
+
+# Numerical tolerances for the self-checks printed at the end of a run (float32 arithmetic).
+TOL_ABS = 1e-4  # logit decomposition, Z*L = M and normalised-map comparisons
+TOL_REL = 1e-5  # alpha_k vs w_k / Z
