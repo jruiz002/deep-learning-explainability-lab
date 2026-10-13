@@ -124,5 +124,44 @@ def run_task2(seed: int = config.SEED) -> Task2Run:
     }
     extra.update(phi=phi, expl=expl, I=I, perm=perm, base_val=base_val)
 
+    # ---- 2.3 ------------------------------------------------------------------------------
+    num_idx = [names.index(n) for n in d.numeric]
+    chosen = names[max(num_idx, key=lambda j: I[j])]
+    copy_name = f"{chosen}_copy"
+    rng = np.random.default_rng(seed)
+    sigma = float(d.X[chosen].std())
+    dup = d.X[chosen].to_numpy() + config.DUP_NOISE_SCALE * sigma * rng.standard_normal(len(d.y))
+    X_aug = d.X.copy()
+    X_aug[copy_name] = dup
+    Xtr2, Xte2 = X_aug.iloc[sp.idx_train], X_aug.iloc[sp.idx_test]
+    model2 = credit.train_gbc(Xtr2, sp.y_train, seed)
+    bg2 = Xtr2.loc[bg.index]
+    names2 = list(X_aug.columns)
+    jo, jc = names2.index(chosen), names2.index(copy_name)
+    cfg = {}
+    e_int = shap.TreeExplainer(model2, data=bg2, feature_perturbation="interventional", model_output="raw")
+    e_path = shap.TreeExplainer(model2, feature_perturbation="tree_path_dependent", model_output="raw")
+    for key, e in (("interventional", e_int), ("tree_path_dependent", e_path)):
+        ph = np.asarray(e.shap_values(Xte2, check_additivity=False))
+        a_o, a_c = np.abs(ph[:, jo]).mean(), np.abs(ph[:, jc]).mean()
+        cfg[key] = {
+            "mean_abs_orig": float(a_o),
+            "mean_abs_copy": float(a_c),
+            "mean_abs_sum": float(np.abs(ph[:, jo] + ph[:, jc]).mean()),
+            "share_orig": float(a_o / (a_o + a_c)),
+            "corr_phi_orig_copy": float(np.corrcoef(ph[:, jo], ph[:, jc])[0, 1]),
+        }
+        extra[f"phi_dup_{key}"] = ph
+    imp2 = np.abs(extra["phi_dup_interventional"]).mean(axis=0)
+    res["t2_3"] = {
+        "feature": chosen, "copy": copy_name, "sigma": sigma,
+        "corr_orig_copy": float(np.corrcoef(d.X[chosen], dup)[0, 1]),
+        "test_accuracy_21": float(model2.score(Xte2, y_test)),
+        "test_auc_21": float(roc_auc_score(y_test, model2.predict_proba(Xte2)[:, 1])),
+        "I_orig_without_copy": float(I[names.index(chosen)]),
+        "mean_abs_other_features_21": float(np.delete(imp2, [jo, jc]).mean()),
+        "configs": cfg,
+    }
+
     res["elapsed_s"] = time.perf_counter() - t_start
     return Task2Run(res, extra)

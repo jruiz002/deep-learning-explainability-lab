@@ -59,3 +59,24 @@ def fig_importance(run, out: Path) -> Path:
     fig.suptitle(f"Spearman entre ambos vectores = {t['c_spearman']:.3f}", fontsize=10)
     fig.tight_layout()
     return _save(fig, out)
+
+
+def fig_duplicate(run, out: Path) -> Path:
+    t = run.results["t2_3"]
+    labels = ["interventional", "tree_path_dependent"]
+    series = [("mean|$\\phi$| original", "mean_abs_orig", ACCENT), ("mean|$\\phi$| copia", "mean_abs_copy", ORANGE),
+              ("mean|$\\phi_{orig}+\\phi_{copia}$|", "mean_abs_sum", INK)]
+    fig, ax = plt.subplots(figsize=(7.5, 4))
+    w = 0.2
+    for i, (lab, key, col) in enumerate(series):
+        vals = [t["configs"][c][key] for c in labels]
+        bars = ax.bar(np.arange(2) + (i - 1.5) * w, vals, w, label=lab, color=col)
+        ax.bar_label(bars, fmt="%.3f", fontsize=7)
+    ax.bar(np.arange(2) + 1.5 * w, [t["I_orig_without_copy"]] * 2, w, label="$I_j$ original, modelo sin copia", color="none",
+           edgecolor=MUTED, hatch="//")
+    ax.set_xticks(np.arange(2), labels)
+    ax.set_ylabel("log-odds")
+    ax.set_title(f"Variable duplicada: {t['feature']} (copia con 5 % de ruido)", fontsize=9)
+    ax.set_ylim(0, 1.35 * max(t["configs"][c]["mean_abs_sum"] for c in labels))
+    ax.legend(frameon=False, fontsize=7, ncol=2, loc="upper center")
+    return _save(fig, out)
