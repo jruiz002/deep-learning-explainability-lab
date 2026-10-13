@@ -24,15 +24,24 @@ source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 pip install -e .                   # hace importable el paquete xai_lab
 
-python -m pytest -q                # pruebas unitarias (13)
+python -m pytest -q                # pruebas unitarias (32)
 python scripts/run_task1.py        # corre todo el Task 1
+python scripts/run_task2.py        # corre todo el Task 2 (SHAP sobre German Credit)
+python scripts/run_task3.py        # corre todo el Task 3 (LIME desde cero)
 ```
 
 Al correrlo, la consola imprime un reporte de ejecución con una sección por inciso (`Task 1.1`, `1.2`, `1.3`,
 `1.4(a)`, `1.4(b)` y `1.4(c)`), una tabla de **verificaciones numéricas** (OK/FALLO contra una tolerancia) y la lista de
 archivos generados. El programa termina con código de salida 1 si alguna verificación falla. Las figuras quedan en
 `outputs/task1/figures/` y los números en `outputs/task1/results.json`. Tarda unos segundos en CPU.
-(`make setup`, `make test` y `make task1` hacen lo mismo.)
+El Task 2 se corre igual (`scripts/run_task2.py`; descarga German Credit de OpenML la primera vez, unos 10 s en total), imprime
+su propio reporte con verificaciones numéricas, guarda las figuras en `outputs/task2/figures/` y los números en
+`outputs/task2/results.json`, y reescribe su sección del informe (entre `INFORME_TASK2:INICIO` y `INFORME_TASK2:FIN`, debajo del
+informe del Task 1).
+El Task 3 (`scripts/run_task3.py`, unos 2 s; reutiliza el modelo y los clientes del Task 2) imprime su reporte con verificaciones numéricas,
+guarda las figuras en `outputs/task3/figures/` y los números en `outputs/task3/results.json`, y reescribe su sección del informe (entre
+`INFORME_TASK3:INICIO` y `INFORME_TASK3:FIN`, debajo del informe del Task 2). (`make setup`, `make test`, `make task1`, `make task2` y
+`make task3` hacen lo mismo.)
 
 Estructura del código:
 
@@ -45,7 +54,14 @@ src/xai_lab/
   causal.py          prueba causal con gris
   task1.py           los experimentos de 1.1 a 1.4
   data.py, model.py, viz.py, report.py, console.py, config.py
-scripts/run_task1.py punto de entrada
+  credit.py          German Credit, partición, GBC, fondo y selección de clientes (Tasks 2 y 3)
+  shapley.py         Shapley exacto con NumPy (2.5)
+  task2.py           los experimentos de 2.1 a 2.6
+  viz_tabular.py, console_task2.py, report_task2.py   figuras, reporte de consola e informe del Task 2
+  lime_tabular.py    LIME tabular con NumPy: muestreo, kernel, ridge ponderada en forma cerrada, R²_w y N_ef (Task 3)
+  task3.py           los experimentos 3.1 y 3.2
+  viz_task3.py, console_task3.py, report_task3.py   figuras, reporte de consola e informe del Task 3
+scripts/run_task1.py, scripts/run_task2.py, scripts/run_task3.py   puntos de entrada
 tests/               pruebas de las identidades matemáticas, geometría y hooks
 ```
 
@@ -477,3 +493,96 @@ Usa German Credit con `fetch_openml("credit-g", version=1)`, codifica `good`=1 y
 Fijamos los detalles que cambian los números en lugar de pedir simplemente "calcula SHAP". Con `model_output="raw"` SHAP explica el log-odds; sin eso explicaría otra salida y la eficiencia en log-odds no cerraría. Nombrar `interventional` frente a `tree_path_dependent` evitó que la librería escogiera una de las dos por defecto sin que lo supiéramos. Usar el mismo fondo en KernelSHAP y en TreeSHAP hizo que el MAE midiera sólo la aproximación y no un cambio de referencia. Pedir las 64 coaliciones vectorizadas en una sola llamada permitió que el cálculo exacto corriera en segundos, y las verificaciones automáticas con tolerancias detectaron errores antes de escribir el informe.
 
 <!-- INFORME_TASK2:FIN -->
+
+<!-- INFORME_TASK3:INICIO (generado por scripts/run_task3.py; no editar a mano) -->
+
+# Task 3
+
+## Configuración
+
+- Salida explicada: P(good) del mismo `GradientBoostingClassifier` y los mismos tres clientes del Task 2 (`credit.build_base` y `select_clients`).
+- Semilla aleatoria: **42**. Muestras por explicación: N = 5000; variables conservadas: K = 5; λ = 1;
+  σ_rel = 0.75 con d' = 20, es decir σ = σ_rel·√d' = 3.3541.
+- Variable ausente: z'_j ~ Bernoulli(0.5) de forma independiente por muestra y variable; con z'_j = 1 se conserva el valor del cliente y
+  con z'_j = 0 se toma un valor al azar de la columna j del conjunto de entrenamiento. Peso π = exp(−D²/σ²), con D² igual al número de variables ausentes.
+- Ajuste: regresión ridge ponderada en forma cerrada con `np.linalg.solve`; el intercepto **no se penaliza**. Se ajustan las 20 variables, se
+  conservan las K de mayor |w| y se reajusta sólo con ellas; R²_w se calcula sobre ese reajuste con las mismas muestras y pesos.
+- Versiones: scikit-learn 1.9.0, NumPy 2.5.2, pandas 3.0.5, Python 3.14.7.
+
+## Task 3.1 - LIME desde cero
+
+**Cliente aprobado** (posición 0 del conjunto de prueba; p(good) = 0.866; intercepto = 0.669; R²_w = 0.172; N_ef = 4808.4):
+
+| Variable | Valor del cliente | Coeficiente |
+|---|---|---|
+| `savings_status` | no known savings | +0.141 |
+| `credit_amount` | 2427 | +0.074 |
+| `checking_status` | 0<=X<200 | -0.063 |
+| `residence_since` | 2 | -0.038 |
+| `duration` | 18 | +0.033 |
+
+
+**Cliente rechazado** (posición 1 del conjunto de prueba; p(good) = 0.087; intercepto = 0.551; R²_w = 0.227; N_ef = 4808.4):
+
+| Variable | Valor del cliente | Coeficiente |
+|---|---|---|
+| `savings_status` | no known savings | +0.141 |
+| `other_payment_plans` | bank | -0.132 |
+| `checking_status` | 0<=X<200 | -0.112 |
+| `duration` | 36 | -0.106 |
+| `age` | 29 | -0.102 |
+
+
+**Cliente dudoso** (posición 87 del conjunto de prueba; p(good) = 0.504; intercepto = 0.635; R²_w = 0.279; N_ef = 4808.4):
+
+| Variable | Valor del cliente | Coeficiente |
+|---|---|---|
+| `checking_status` | no checking | +0.241 |
+| `duration` | 36 | -0.154 |
+| `credit_amount` | 909 | -0.106 |
+| `purpose` | new car | -0.074 |
+| `age` | 36 | +0.044 |
+
+
+![Figura 14. Coeficientes LIME (top-5) de los tres clientes; R²_w del reajuste en el título de cada panel.](outputs/task3/figures/fig_3_1_coefs.png)
+
+*Figura 14. Coeficientes LIME (top-5) de los tres clientes; R²_w del reajuste en el título de cada panel.*
+
+En el cliente rechazado (p = 0.087), `other_payment_plans`, `checking_status`, `duration` y `age` tienen coeficiente negativo, es decir, conservar su valor en lugar de sustituirlo por uno de entrenamiento baja P(good) en la aproximación local; el de mayor magnitud es `other_payment_plans` = bank (-0.132). En sentido contrario, `savings_status` = no known savings (+0.141) tiene coeficiente positivo. R²_w va de 0.172 (cliente aprobado) a 0.279 (cliente dudoso): en los tres clientes el modelo lineal con 5 variables explica menos de la mitad de la varianza ponderada de P(good), de modo que los coeficientes describen sólo una parte del comportamiento local del modelo. Variables presentes en el top-5 de dos clientes: aprobado y rechazado: `checking_status`, `duration` y `savings_status`; aprobado y dudoso: `checking_status`, `credit_amount` y `duration`; rechazado y dudoso: `age`, `checking_status` y `duration`.
+
+## Task 3.2 - Estabilidad
+
+Cliente rechazado (posición 1); para cada combinación de N y σ_rel se corrieron 20 explicaciones con las semillas
+0 a 19 y se promedió el Jaccard del top-5 sobre los 190 pares.
+
+**Jaccard medio** (filas N, columnas σ_rel):
+
+| N \ σ_rel | 0.5 | 0.75 | 1.5 |
+|---|---|---|---|
+| 500 | 0.6981 | 0.6992 | 0.7216 |
+| 2000 | 0.7689 | 0.7872 | 0.8043 |
+| 5000 | 0.9105 | 0.9368 | 0.9368 |
+
+**N_ef medio** (filas N, columnas σ_rel):
+
+| N \ σ_rel | 0.5 | 0.75 | 1.5 |
+|---|---|---|---|
+| 500 | 407.9 | 480.3 | 498.7 |
+| 2000 | 1637.9 | 1922.0 | 1995.0 |
+| 5000 | 4098.9 | 4805.9 | 4987.6 |
+
+![Figura 15. Jaccard medio y tamaño efectivo de muestra N_ef según N y σ_rel (cliente rechazado).](outputs/task3/figures/fig_3_2_stability.png)
+
+*Figura 15. Jaccard medio y tamaño efectivo de muestra N_ef según N y σ_rel (cliente rechazado).*
+
+El Jaccard medio crece con N en las tres anchuras (por ejemplo, con σ_rel = 0.75 pasa de 0.699 con N = 500 a 0.937 con N = 5000); con N fijo no disminuye al aumentar σ_rel; el valor más alto es 0.937 (N = 5000, σ_rel = 1.5) y el más bajo 0.698 (N = 500, σ_rel = 0.5). N_ef equivale a una fracción de N que casi no cambia con N (variación máxima de 0.4% de N dentro de cada σ_rel); promedia 81.8% de N con σ_rel = 0.5, 96.1% con 0.75 y 99.8% con 1.5, de modo que un kernel más ancho reparte el peso entre más muestras.
+
+**Prompt utilizado**
+
+Pendiente
+
+**Por qué funcionó este prompt**
+
+Pendiente
+
+<!-- INFORME_TASK3:FIN -->

@@ -1,0 +1,531 @@
+{
+  "environment": {
+    "seed": 42,
+    "python": "3.14.7",
+    "sklearn": "1.9.0",
+    "numpy": "2.5.2",
+    "pandas": "3.0.5"
+  },
+  "config": {
+    "seed": 42,
+    "n": 5000,
+    "k": 5,
+    "lambda": 1.0,
+    "sigma_rel": 0.75,
+    "d_prime": 20,
+    "sigma": 3.3541019662496847,
+    "intercept_penalized": false
+  },
+  "t3_1": {
+    "aprobado": {
+      "test_position": 0,
+      "p_good": 0.8663774543077746,
+      "intercept": 0.6694514764684893,
+      "r2w": 0.17159673657688113,
+      "n_eff": 4808.426954871523,
+      "top": [
+        {
+          "feature": "savings_status",
+          "value": "no known savings",
+          "coef": 0.14058522420991326
+        },
+        {
+          "feature": "credit_amount",
+          "value": "2427",
+          "coef": 0.07386805339151845
+        },
+        {
+          "feature": "checking_status",
+          "value": "0<=X<200",
+          "coef": -0.06340013728138283
+        },
+        {
+          "feature": "residence_since",
+          "value": "2",
+          "coef": -0.03813235588312193
+        },
+        {
+          "feature": "duration",
+          "value": "18",
+          "coef": 0.03301870498361337
+        }
+      ],
+      "full_coefs": {
+        "checking_status": -0.0628507645619024,
+        "duration": 0.033326403673353995,
+        "credit_history": -0.0005075290638947359,
+        "purpose": 0.019744376874446377,
+        "credit_amount": 0.07514464163879249,
+        "savings_status": 0.13950418909389944,
+        "employment": -0.012349945258223272,
+        "installment_commitment": -0.031492095232377934,
+        "personal_status": 0.01908500526544049,
+        "other_parties": 0.0003295200903141825,
+        "residence_since": -0.03806451366229762,
+        "property_magnitude": -0.00414042855023471,
+        "age": 0.03263599902641615,
+        "other_payment_plans": 0.029737336758418782,
+        "housing": 0.006441881466042367,
+        "existing_credits": 0.010638627385401318,
+        "job": -0.0045924270686748744,
+        "num_dependents": -0.0008823303468775611,
+        "own_telephone": -0.007545635074792321,
+        "foreign_worker": -0.00871222118256077
+      },
+      "max_abs_diff_lstsq": 8.43769498715119e-15,
+      "max_abs_diff_sklearn_ridge": 8.881784197001252e-15
+    },
+    "rechazado": {
+      "test_position": 1,
+      "p_good": 0.08714380900542418,
+      "intercept": 0.550798955548479,
+      "r2w": 0.22677228061110355,
+      "n_eff": 4808.426954871523,
+      "top": [
+        {
+          "feature": "savings_status",
+          "value": "no known savings",
+          "coef": 0.1414853863800766
+        },
+        {
+          "feature": "other_payment_plans",
+          "value": "bank",
+          "coef": -0.13235784740803463
+        },
+        {
+          "feature": "checking_status",
+          "value": "0<=X<200",
+          "coef": -0.11210967558284114
+        },
+        {
+          "feature": "duration",
+          "value": "36",
+          "coef": -0.1062265813949214
+        },
+        {
+          "feature": "age",
+          "value": "29",
+          "coef": -0.10200480785990677
+        }
+      ],
+      "full_coefs": {
+        "checking_status": -0.1116086792317809,
+        "duration": -0.10550426886324112,
+        "credit_history": -0.06529977793336436,
+        "purpose": -0.07973048850330769,
+        "credit_amount": 0.05187647146765717,
+        "savings_status": 0.14223643365189334,
+        "employment": -0.027183328873204893,
+        "installment_commitment": -0.028017594464741974,
+        "personal_status": -0.021853884538639144,
+        "other_parties": -0.005096098852506425,
+        "residence_since": -0.0806016348926832,
+        "property_magnitude": -0.030985924539019764,
+        "age": -0.10106014512053856,
+        "other_payment_plans": -0.1265523369948442,
+        "housing": 0.005906160505834866,
+        "existing_credits": 0.0006058645269109784,
+        "job": -0.011394819770461634,
+        "num_dependents": 0.000798545580783623,
+        "own_telephone": 0.002731596645585049,
+        "foreign_worker": -0.009527315737164269
+      },
+      "max_abs_diff_lstsq": 2.808864252301646e-14,
+      "max_abs_diff_sklearn_ridge": 2.3425705819590803e-14
+    },
+    "dudoso": {
+      "test_position": 87,
+      "p_good": 0.5039966989705523,
+      "intercept": 0.6351416998960566,
+      "r2w": 0.279012815461013,
+      "n_eff": 4808.426954871523,
+      "top": [
+        {
+          "feature": "checking_status",
+          "value": "no checking",
+          "coef": 0.24080246738297426
+        },
+        {
+          "feature": "duration",
+          "value": "36",
+          "coef": -0.1537910392681923
+        },
+        {
+          "feature": "credit_amount",
+          "value": "909",
+          "coef": -0.10637336319698494
+        },
+        {
+          "feature": "purpose",
+          "value": "new car",
+          "coef": -0.0736172647306947
+        },
+        {
+          "feature": "age",
+          "value": "36",
+          "coef": 0.04381008068051756
+        }
+      ],
+      "full_coefs": {
+        "checking_status": 0.2411709950993421,
+        "duration": -0.1546620317464773,
+        "credit_history": -0.02060830261567887,
+        "purpose": -0.07344269889489956,
+        "credit_amount": -0.10534578441512886,
+        "savings_status": -0.028714805291405736,
+        "employment": 0.005691066789254288,
+        "installment_commitment": -0.03838299882053663,
+        "personal_status": 0.01908815436487749,
+        "other_parties": -0.006234171710636455,
+        "residence_since": -0.013900108130375111,
+        "property_magnitude": -0.0010915722818438175,
+        "age": 0.04289636929738399,
+        "other_payment_plans": 0.0399201564446768,
+        "housing": 0.008272475330550897,
+        "existing_credits": -0.010862360407897129,
+        "job": -0.0009123501770386099,
+        "num_dependents": -0.005125370764651233,
+        "own_telephone": -0.012272011396550866,
+        "foreign_worker": -0.011129342982942938
+      },
+      "max_abs_diff_lstsq": 3.774758283725532e-14,
+      "max_abs_diff_sklearn_ridge": 3.552713678800501e-14
+    }
+  },
+  "t3_2": {
+    "client": "rechazado",
+    "test_position": 1,
+    "n_values": [
+      500,
+      2000,
+      5000
+    ],
+    "sigma_rel_values": [
+      0.5,
+      0.75,
+      1.5
+    ],
+    "seeds": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19
+    ],
+    "k": 5,
+    "lambda": 1.0,
+    "jaccard": [
+      [
+        0.6980576441102758,
+        0.699248120300752,
+        0.7215538847117796
+      ],
+      [
+        0.7689223057644112,
+        0.7872180451127821,
+        0.8042606516290729
+      ],
+      [
+        0.9105263157894737,
+        0.9368421052631579,
+        0.9368421052631579
+      ]
+    ],
+    "n_eff": [
+      [
+        407.89343023511975,
+        480.2633436761959,
+        498.74599020283074
+      ],
+      [
+        1637.87383013505,
+        1921.9754597250708,
+        1995.0215573520975
+      ],
+      [
+        4098.865229456065,
+        4805.910213489873,
+        4987.611933837145
+      ]
+    ],
+    "cells": [
+      {
+        "n": 500,
+        "sigma_rel": 0.5,
+        "n_pairs": 190,
+        "jaccard_min": 0.25,
+        "jaccard_max": 1.0,
+        "most_frequent": [
+          {
+            "feature": "savings_status",
+            "frequency": 1.0
+          },
+          {
+            "feature": "age",
+            "frequency": 0.95
+          },
+          {
+            "feature": "duration",
+            "frequency": 0.95
+          },
+          {
+            "feature": "other_payment_plans",
+            "frequency": 0.95
+          },
+          {
+            "feature": "checking_status",
+            "frequency": 0.45
+          }
+        ]
+      },
+      {
+        "n": 500,
+        "sigma_rel": 0.75,
+        "n_pairs": 190,
+        "jaccard_min": 0.42857142857142855,
+        "jaccard_max": 1.0,
+        "most_frequent": [
+          {
+            "feature": "duration",
+            "frequency": 1.0
+          },
+          {
+            "feature": "savings_status",
+            "frequency": 1.0
+          },
+          {
+            "feature": "other_payment_plans",
+            "frequency": 0.95
+          },
+          {
+            "feature": "age",
+            "frequency": 0.9
+          },
+          {
+            "feature": "checking_status",
+            "frequency": 0.45
+          }
+        ]
+      },
+      {
+        "n": 500,
+        "sigma_rel": 1.5,
+        "n_pairs": 190,
+        "jaccard_min": 0.42857142857142855,
+        "jaccard_max": 1.0,
+        "most_frequent": [
+          {
+            "feature": "duration",
+            "frequency": 1.0
+          },
+          {
+            "feature": "other_payment_plans",
+            "frequency": 1.0
+          },
+          {
+            "feature": "savings_status",
+            "frequency": 1.0
+          },
+          {
+            "feature": "age",
+            "frequency": 0.9
+          },
+          {
+            "feature": "checking_status",
+            "frequency": 0.5
+          }
+        ]
+      },
+      {
+        "n": 2000,
+        "sigma_rel": 0.5,
+        "n_pairs": 190,
+        "jaccard_min": 0.42857142857142855,
+        "jaccard_max": 1.0,
+        "most_frequent": [
+          {
+            "feature": "duration",
+            "frequency": 1.0
+          },
+          {
+            "feature": "savings_status",
+            "frequency": 1.0
+          },
+          {
+            "feature": "age",
+            "frequency": 0.95
+          },
+          {
+            "feature": "other_payment_plans",
+            "frequency": 0.95
+          },
+          {
+            "feature": "checking_status",
+            "frequency": 0.65
+          }
+        ]
+      },
+      {
+        "n": 2000,
+        "sigma_rel": 0.75,
+        "n_pairs": 190,
+        "jaccard_min": 0.42857142857142855,
+        "jaccard_max": 1.0,
+        "most_frequent": [
+          {
+            "feature": "duration",
+            "frequency": 1.0
+          },
+          {
+            "feature": "other_payment_plans",
+            "frequency": 1.0
+          },
+          {
+            "feature": "savings_status",
+            "frequency": 1.0
+          },
+          {
+            "feature": "age",
+            "frequency": 0.9
+          },
+          {
+            "feature": "checking_status",
+            "frequency": 0.7
+          }
+        ]
+      },
+      {
+        "n": 2000,
+        "sigma_rel": 1.5,
+        "n_pairs": 190,
+        "jaccard_min": 0.42857142857142855,
+        "jaccard_max": 1.0,
+        "most_frequent": [
+          {
+            "feature": "duration",
+            "frequency": 1.0
+          },
+          {
+            "feature": "other_payment_plans",
+            "frequency": 1.0
+          },
+          {
+            "feature": "savings_status",
+            "frequency": 1.0
+          },
+          {
+            "feature": "age",
+            "frequency": 0.9
+          },
+          {
+            "feature": "checking_status",
+            "frequency": 0.75
+          }
+        ]
+      },
+      {
+        "n": 5000,
+        "sigma_rel": 0.5,
+        "n_pairs": 190,
+        "jaccard_min": 0.6666666666666666,
+        "jaccard_max": 1.0,
+        "most_frequent": [
+          {
+            "feature": "age",
+            "frequency": 1.0
+          },
+          {
+            "feature": "duration",
+            "frequency": 1.0
+          },
+          {
+            "feature": "other_payment_plans",
+            "frequency": 1.0
+          },
+          {
+            "feature": "savings_status",
+            "frequency": 1.0
+          },
+          {
+            "feature": "checking_status",
+            "frequency": 0.85
+          }
+        ]
+      },
+      {
+        "n": 5000,
+        "sigma_rel": 0.75,
+        "n_pairs": 190,
+        "jaccard_min": 0.6666666666666666,
+        "jaccard_max": 1.0,
+        "most_frequent": [
+          {
+            "feature": "age",
+            "frequency": 1.0
+          },
+          {
+            "feature": "duration",
+            "frequency": 1.0
+          },
+          {
+            "feature": "other_payment_plans",
+            "frequency": 1.0
+          },
+          {
+            "feature": "savings_status",
+            "frequency": 1.0
+          },
+          {
+            "feature": "checking_status",
+            "frequency": 0.9
+          }
+        ]
+      },
+      {
+        "n": 5000,
+        "sigma_rel": 1.5,
+        "n_pairs": 190,
+        "jaccard_min": 0.6666666666666666,
+        "jaccard_max": 1.0,
+        "most_frequent": [
+          {
+            "feature": "age",
+            "frequency": 1.0
+          },
+          {
+            "feature": "duration",
+            "frequency": 1.0
+          },
+          {
+            "feature": "other_payment_plans",
+            "frequency": 1.0
+          },
+          {
+            "feature": "savings_status",
+            "frequency": 1.0
+          },
+          {
+            "feature": "checking_status",
+            "frequency": 0.9
+          }
+        ]
+      }
+    ]
+  },
+  "time_s": 1.595173200010322
+}

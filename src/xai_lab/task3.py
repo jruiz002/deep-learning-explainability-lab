@@ -65,5 +65,27 @@ def run_task3(seed: int = config.SEED) -> Task3Run:
         }
     res["t3_1"] = t31
 
+    # ---- 3.2 ------------------------------------------------------------------------------
+    pos = clients["rechazado"]
+    x = sp.X_test.iloc[pos].to_numpy()
+    seeds = list(range(config.LIME_STAB_RUNS))
+    jac, neff, cells = [], [], []
+    for n in config.LIME_STAB_N:
+        jrow, nrow = [], []
+        for sr in config.LIME_STAB_SIGMA_REL:
+            runs = [lt.explain(x, predict, X_train, names, n=n, sigma_rel=sr, seed=s) for s in seeds]
+            sets = [set(r.features) for r in runs]
+            j = [len(a & b) / len(a | b) for a, b in combinations(sets, 2)]
+            freq = Counter(f for s_ in sets for f in s_)
+            jrow.append(float(np.mean(j)))
+            nrow.append(float(np.mean([r.n_eff for r in runs])))
+            cells.append({"n": n, "sigma_rel": sr, "n_pairs": len(j), "jaccard_min": float(min(j)), "jaccard_max": float(max(j)),
+                          "most_frequent": [{"feature": f, "frequency": c / len(seeds)}
+                                            for f, c in sorted(freq.items(), key=lambda kv: (-kv[1], kv[0]))[:config.LIME_STAB_TOP]]})
+        jac.append(jrow)
+        neff.append(nrow)
+    res["t3_2"] = {"client": "rechazado", "test_position": pos, "n_values": list(config.LIME_STAB_N),
+                   "sigma_rel_values": list(config.LIME_STAB_SIGMA_REL), "seeds": seeds, "k": config.LIME_K,
+                   "lambda": config.LIME_LAMBDA, "jaccard": jac, "n_eff": neff, "cells": cells}
     res["time_s"] = time.perf_counter() - t0
     return Task3Run(res)

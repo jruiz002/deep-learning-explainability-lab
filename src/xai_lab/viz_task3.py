@@ -23,3 +23,28 @@ def fig_lime_coefs(results: dict, out: Path) -> Path:
         ax.set_title(f"{key} (p = {c['p_good']:.3f}, $R^2_w$ = {c['r2w']:.3f})", fontsize=9)
     fig.tight_layout()
     return _save(fig, out)
+
+
+def _heatmap(ax, M, rows, cols, title: str, fmt: str) -> None:
+    M = np.asarray(M)
+    im = ax.imshow(M, cmap=CMAP, aspect="auto")
+    ax.set_xticks(range(len(cols)), [f"{c:g}" for c in cols])
+    ax.set_yticks(range(len(rows)), [f"{r:,}" for r in rows])
+    ax.set_xlabel("$\\sigma_{rel}$")
+    ax.set_ylabel("N")
+    ax.set_title(title, fontsize=9)
+    mid = (M.min() + M.max()) / 2
+    for i in range(M.shape[0]):
+        for j in range(M.shape[1]):
+            ax.text(j, i, format(M[i, j], fmt), ha="center", va="center", fontsize=9,
+                    color="white" if M[i, j] < mid else INK)
+    ax.figure.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+
+
+def fig_stability(results: dict, out: Path) -> Path:
+    t = results["t3_2"]
+    fig, axes = plt.subplots(1, 2, figsize=(9.5, 3.6))
+    _heatmap(axes[0], t["jaccard"], t["n_values"], t["sigma_rel_values"], "Jaccard medio (190 pares)", ".3f")
+    _heatmap(axes[1], t["n_eff"], t["n_values"], t["sigma_rel_values"], "$N_{ef}$ medio (20 corridas)", ".0f")
+    fig.tight_layout()
+    return _save(fig, out)
