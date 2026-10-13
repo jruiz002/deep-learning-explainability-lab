@@ -1,4 +1,4 @@
-# Laboratorio de Explicabilidad - Task 1 (Entrega Parcial)
+# Laboratorio de Explicabilidad
 
 **Curso:** Deep Learning - Universidad del Valle de Guatemala
 
