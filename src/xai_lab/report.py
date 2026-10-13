@@ -386,3 +386,24 @@ def update_readme(readme: Path, informe: str) -> None:
     else:
         text = text.rstrip() + "\n\n---\n\n" + block
     readme.write_text(text, encoding="utf-8")
+
+
+def update_readme_block(readme: Path, begin: str, end: str, text: str, after: str | None = None) -> None:
+    """Replace the text between ``begin`` and ``end`` in the README.
+
+    If the block is missing it is inserted right after the ``after`` marker (e.g. INFORME_END), or appended at the
+    end when ``after`` is None or absent. Everything outside the block, including later blocks, is preserved.
+    """
+    doc = readme.read_text(encoding="utf-8")
+    block = f"{begin}\n\n{text.rstrip()}\n\n{end}\n"
+    if begin in doc and end in doc:
+        head = doc[: doc.index(begin)]
+        tail = doc[doc.index(end, doc.index(begin)) + len(end):].lstrip("\n")
+        doc = head + block + ("\n" + tail if tail else "")
+    elif after is not None and after in doc:
+        cut = doc.index(after) + len(after)
+        head, tail = doc[:cut].rstrip("\n"), doc[cut:].lstrip("\n")
+        doc = head + "\n\n" + block + ("\n" + tail if tail else "")
+    else:
+        doc = doc.rstrip() + "\n\n" + block
+    readme.write_text(doc, encoding="utf-8")

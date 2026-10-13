@@ -231,5 +231,59 @@ def run_task2(seed: int = config.SEED) -> Task2Run:
     }
     extra.update(own=own, ref=ref)
 
+    # ---- 2.6 ------------------------------------------------------------------------------
+    # (a) rejected client: additivity holds in log-odds, not in probability
+    rc = clients["rechazado"]
+    pos = rc["test_position"]
+    phi_r = phi[pos]
+    s0 = float(_sigmoid(base_val))
+    sj = _sigmoid(base_val + phi_r) - s0
+    p_x = rc["p_good"]
+    res["t2_6"] = {"a": {
+        "test_position": pos, "p": p_x, "log_odds": rc["log_odds"], "phi0": base_val, "sigma_phi0": s0,
+        "sum_phi": float(phi_r.sum()), "sigma_effects": {n: float(v) for n, v in zip(names, sj)},
+        "sum_sigma_effects": float(sj.sum()), "p_minus_sigma_phi0": p_x - s0,
+        "gap": float(p_x - s0 - sj.sum()),
+    }}
+    # (b) largest rank disagreement between the two importance measures
+    diff = np.abs(rk_I - rk_perm)
+    jb = int(np.argmax(diff))
+    fb = names[jb]
+    corr = sp.X_train.corr(method="spearman")[fb].drop(fb)
+    top_corr = corr.reindex(corr.abs().sort_values(ascending=False).index)[:3]
+    abs_phi = np.abs(phi[:, jb])
+    srt = np.sort(abs_phi)[::-1]
+    n50 = int(np.searchsorted(np.cumsum(srt), 0.5 * srt.sum()) + 1)
+    res["t2_6"]["b"] = {
+        "feature": fb, "rank_shap": int(rk_I[jb]), "rank_perm": int(rk_perm[jb]), "rank_gap": int(diff[jb]),
+        "I": float(I[jb]), "perm_mean": float(perm.importances_mean[jb]), "perm_std": float(perm.importances_std[jb]),
+        "top_corr": [{"feature": n, "spearman": float(v)} for n, v in top_corr.items()],
+        "max_abs_corr": float(top_corr.abs().max()),
+        "n_clients_50pct": n50, "frac_clients_50pct": n50 / len(abs_phi),
+        "is_categorical": fb in d.categorical,
+        "n_categories": int(d.X[fb].nunique()),
+        "ties_in_rank_gap": int((diff == diff.max()).sum()),
+    }
+    # (d) cost model
+    xb = bg.to_numpy()
+    f_all = _frame_f(model, names)
+    f_all(xb)  # warm-up
+    reps = []
+    for _ in range(30):
+        t0 = time.perf_counter()
+        f_all(xb)
+        reps.append(time.perf_counter() - t0)
+    t100 = float(np.median(reps))
+    k100 = next(r for r in kern if r["k"] == 100)
+    exact20 = 2 ** 20 * t100
+    res["t2_6"]["d"] = {
+        "t_decision_function_100_s": t100, "n_repeats": len(reps),
+        "exact_20_vars_s": exact20, "exact_20_vars_h": exact20 / 3600,
+        "kernel_per_instance_s_k100": k100["time_kernel_per_instance_s"],
+        "exact_over_kernel": exact20 / k100["time_kernel_per_instance_s"],
+        "years_60_vars_1us": 2 ** 60 * 1e-6 / (365.25 * 24 * 3600),
+        "by_background": [{"k": r["k"], "mae": r["mae"], "time_per_evaluation_us": r["time_per_evaluation_us"],
+                           "evaluations": r["model_evaluations"], "time_kernel_s": r["time_kernel_s"]} for r in kern],
+    }
     res["elapsed_s"] = time.perf_counter() - t_start
     return Task2Run(res, extra)

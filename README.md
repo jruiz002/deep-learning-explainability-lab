@@ -234,3 +234,246 @@ cambio puede deberse a ello y no sólo a la eliminación de información) y el r
 - Un mapa de calor por sí solo no demuestra que el modelo use o ignore el fondo; la prueba causal con gris lo complementó y en (c) mostró evidencia parcial de dependencia del fondo, aunque no la de un atajo total.
 
 <!-- INFORME:FIN -->
+
+<!-- INFORME_TASK2:INICIO (generado por scripts/run_task2.py; no editar a mano) -->
+
+# Task 2
+
+## Configuración
+
+- Datos: German Credit (`fetch_openml("credit-g", version=1)`), 1000 clientes y 20 variables
+  (13 categóricas y 7 numéricas). Objetivo: `good` = 1, `bad` = 0.
+- Semilla aleatoria: **42** (partición, modelo, fondo, permutaciones y ruido de 2.3).
+- Versiones: scikit-learn 1.9.0, shap 0.53.0, NumPy 2.5.2, pandas 3.0.5, Python 3.14.7.
+- Limitación: las 13 categóricas se codificaron con `OrdinalEncoder`, cuyos códigos siguen el orden alfabético de las categorías y no un
+  orden con significado, pero el modelo los trata como numéricos. Por eso un umbral de un árbol sobre una categórica agrupa categorías por su
+  código, y los φ de esas variables resumen el efecto de ese código y no el de una categoría por separado.
+
+## Task 2.1 - Datos y modelo
+
+Partición estratificada 80/20: 800 clientes de entrenamiento y 200 de prueba, con una proporción de `good` de
+0.70 y 0.70. Modelo: `GradientBoostingClassifier` con 200 árboles de profundidad
+3.
+
+| Métrica (prueba) | Valor |
+|---|---|
+| Exactitud | **0.775** |
+| AUC | **0.765** |
+
+La exactitud supera en 7.5 puntos porcentuales a predecir siempre `good` (0.700).
+
+## Task 2.2 - TreeSHAP interventional
+
+Se usó `TreeExplainer(model, data=fondo, feature_perturbation="interventional", model_output="raw")`, con un fondo de 100 filas de entrenamiento
+(semilla 42), sobre las 200 filas de prueba. La salida explicada es el log-odds, es decir, `decision_function`.
+
+### (a) Eficiencia
+
+max<sub>n</sub> |φ0 + Σ<sub>j</sub> φ<sub>j</sub>(x<sub>n</sub>) − f(x<sub>n</sub>)| = **9.70e-08**
+(dentro de la tolerancia de 1e-6; el error no es cero y es del orden de la precisión simple, lo que sugiere que la extensión en C++ de TreeSHAP no calcula todo en float64).
+
+### (b) Valor base
+
+| φ0 (`expected_value`) | Media de f en el fondo | Diferencia |
+|---|---|---|
+| 1.430742 | 1.430742 | 0.00e+00 |
+
+Coinciden: con `interventional` el valor base es el promedio de la salida del modelo sobre el fondo.
+
+### (c) Importancia SHAP frente a permutación
+
+I<sub>j</sub> = mean|φ<sub>j</sub>| sobre la prueba; permutación con AUC, 10 repeticiones.
+
+| # | mean\|φ\| (variable) | I_j | Permutación (variable) | Caída de AUC |
+|---|---|---|---|---|
+| 1 | `checking_status` | 0.7603 | `checking_status` | 0.1190 |
+| 2 | `purpose` | 0.5117 | `credit_amount` | 0.0764 |
+| 3 | `credit_amount` | 0.4907 | `duration` | 0.0579 |
+| 4 | `duration` | 0.3917 | `credit_history` | 0.0396 |
+| 5 | `savings_status` | 0.2963 | `savings_status` | 0.0262 |
+
+Correlación de Spearman entre los vectores completos de las 20 variables: **ρ = 0.645** (p = 0.0021), una concordancia moderada.
+Los dos top-5 comparten 4 de 5 variables; sólo aparece en el top-5 de I<sub>j</sub> `purpose` y sólo en
+el de permutación `credit_history`.
+
+![Figura 7. Importancia por variable: media de |φ| (izquierda) y caída del AUC por permutación, media ± desviación (derecha). Entre paréntesis, el rango por permutación.](outputs/task2/figures/fig_2_2_importance.png)
+
+*Figura 7. Importancia por variable: media de |φ| (izquierda) y caída del AUC por permutación, media ± desviación (derecha). Entre paréntesis, el rango por permutación.*
+
+### (d) Dos clientes
+
+**Cliente aprobado** (posición 0 del conjunto de prueba; p(good) = 0.866, f(x) = 1.869):
+
+| Variable y valor | φ (log-odds) | Efecto sobre el log-odds |
+|---|---|---|
+| `savings_status` = no known savings | +0.916 | aumenta |
+| `checking_status` = 0<=X<200 | -0.410 | reduce |
+| `credit_amount` = 2427 | +0.393 | aumenta |
+
+**Cliente rechazado** (posición 1 del conjunto de prueba; p(good) = 0.087, f(x) = -2.349):
+
+| Variable y valor | φ (log-odds) | Efecto sobre el log-odds |
+|---|---|---|
+| `duration` = 36 | -0.926 | reduce |
+| `savings_status` = no known savings | +0.877 | aumenta |
+| `other_payment_plans` = bank | -0.806 | reduce |
+
+En el cliente aprobado, las tres mayores contribuciones son `savings_status` = no known savings (aumenta el log-odds en 0.916), `checking_status` = 0<=X<200 (reduce el log-odds en 0.410) y `credit_amount` = 2427 (aumenta el log-odds en 0.393); el log-odds final (1.869) queda por encima del valor base (1.431). En el cliente rechazado, las tres mayores contribuciones son `duration` = 36 (reduce el log-odds en 0.926), `savings_status` = no known savings (aumenta el log-odds en 0.877) y `other_payment_plans` = bank (reduce el log-odds en 0.806); el log-odds final (-2.349) queda por debajo del valor base (1.431). Los valores categóricos se muestran con su etiqueta original.
+
+![Figura 8. Cascada SHAP del cliente aprobado (p > 0.8).](outputs/task2/figures/fig_2_2_waterfall_aprobado.png)
+
+*Figura 8. Cascada SHAP del cliente aprobado (p > 0.8).*
+
+![Figura 9. Cascada SHAP del cliente rechazado (p < 0.2).](outputs/task2/figures/fig_2_2_waterfall_rechazado.png)
+
+*Figura 9. Cascada SHAP del cliente rechazado (p < 0.2).*
+
+![Figura 10. Gráfico de enjambre SHAP global sobre el conjunto de prueba (el color de las categóricas corresponde a su código ordinal).](outputs/task2/figures/fig_2_2_beeswarm.png)
+
+*Figura 10. Gráfico de enjambre SHAP global sobre el conjunto de prueba (el color de las categóricas corresponde a su código ordinal).*
+
+En el enjambre, las variables ordenadas por I<sub>j</sub> son `checking_status`, `purpose` y `credit_amount`. Para las numéricas de mayor
+importancia: en `credit_amount`, no hay una relación monótona clara entre el valor y la contribución (ρ = -0.11); en `duration`, un valor mayor se asocia con menor contribución (ρ = -0.81); en `age`, un valor mayor se asocia con mayor contribución (ρ = +0.81).
+
+## Task 2.3 - Variable duplicada con ruido
+
+La numérica con mayor I<sub>j</sub> es `credit_amount` (I<sub>j</sub> = 0.4907). Se creó `credit_amount_copy` = x + 0.05·σ·ε, con σ = 2822.7 (calculada en el conjunto
+completo) y ε ~ N(0, 1) con semilla 42; la correlación entre la variable y su copia es 0.99878. El modelo se reentrenó con 21 variables
+(exactitud 0.760, AUC 0.767) y se usaron las mismas filas de fondo.
+
+| Configuración | mean\|φ_orig\| | mean\|φ_copia\| | mean\|φ_orig + φ_copia\| | % del original | corr(φ_orig, φ_copia) |
+|---|---|---|---|---|---|
+| interventional | 0.5180 | 0.4284 | 0.5457 | 54.7% | -0.30 |
+| tree_path_dependent | 0.3812 | 0.3629 | 0.5303 | 51.2% | -0.08 |
+
+I<sub>j</sub> de `credit_amount` en el modelo **sin** copia: 0.4907 (es otro modelo, por lo que no es exactamente comparable).
+
+![Figura 11. Crédito repartido entre la variable y su copia, con ambos métodos de TreeSHAP.](outputs/task2/figures/fig_2_3_duplicate.png)
+
+*Figura 11. Crédito repartido entre la variable y su copia, con ambos métodos de TreeSHAP.*
+
+## Task 2.4 - KernelSHAP frente a TreeSHAP
+
+KernelSHAP (`nsamples` = 2000) sobre las primeras 10 filas de prueba, con fondos anidados de k = 10, 50 y 100 filas; TreeSHAP interventional usa
+**el mismo** fondo en cada caso. El MAE se promedia sobre 10 × 20 valores φ.
+
+| k | MAE | Error máximo | KernelSHAP (s) | TreeSHAP (s) | KernelSHAP por instancia (s) | Evaluaciones |
+|---|---|---|---|---|---|---|
+| 10 | 0.0347 | 0.6239 | 0.70 | 0.0020 | 0.070 | 200,010 |
+| 50 | 0.0416 | 0.8252 | 1.98 | 0.0097 | 0.198 | 1,000,010 |
+| 100 | 0.0301 | 0.3683 | 3.85 | 0.0189 | 0.385 | 2,000,010 |
+
+El conteo de evaluaciones supera en 10 (una por instancia, para f(x)) el producto nsamples·k·instancias. Con el mismo fondo, TreeSHAP es entre
+204 y 347 veces más rápido que KernelSHAP (los tiempos dependen de la máquina y de la corrida).
+
+![Figura 12. MAE de KernelSHAP contra TreeSHAP y tiempos de cómputo según el tamaño del fondo.](outputs/task2/figures/fig_2_4_kernel_vs_tree.png)
+
+*Figura 12. MAE de KernelSHAP contra TreeSHAP y tiempos de cómputo según el tamaño del fondo.*
+
+## Task 2.5 - Shapley exacto escrito a mano
+
+Modelo con seis variables (`duration`, `credit_amount`, `installment_commitment`, `residence_since`, `age`, `existing_credits`), misma partición, semilla e hiperparámetros (exactitud 0.685, AUC 0.634). Con un fondo de
+50 filas se enumeraron las 64 coaliciones con máscaras de bits y se evaluó v(S) = media<sub>b</sub> f(x<sub>S</sub>, b<sub>¬S</sub>) en una sola llamada al modelo; los
+pesos son |S|!(n−|S|−1)!/n!. Resultados de las primeras 5 filas de prueba (log-odds):
+
+| Cliente (test) | `duration` | `credit_amount` | `installment_commitment` | `residence_since` | `age` | `existing_credits` | Σφ | f(x) − v(∅) |
+|---|---|---|---|---|---|---|---|---|
+| 0 | -0.4652 | +0.3353 | -0.0531 | -0.1108 | +0.3497 | +0.1798 | +0.2356 | +0.2356 |
+| 1 | -1.1706 | +0.0933 | -0.0414 | -0.1200 | -0.3243 | -0.0771 | -1.6400 | -1.6400 |
+| 2 | +0.3183 | -1.4394 | +0.0311 | +0.0155 | +0.5182 | -0.0785 | -0.6348 | -0.6348 |
+| 3 | +0.5520 | +0.6827 | -0.0529 | -0.1470 | +0.5080 | -0.1110 | +1.4318 | +1.4318 |
+| 4 | +0.6726 | -1.5005 | +0.0285 | +0.0134 | +0.9341 | -0.0839 | +0.0643 | +0.0643 |
+
+- Máximo error absoluto contra `TreeExplainer` interventional con el mismo fondo: **2.42e-08**.
+- Eficiencia, máx. |Σφ − (v(N) − v(∅))|: **2.22e-16**; además v(N) coincide con f(x) (error 5.6e-17).
+- Tiempo del cálculo propio para las 5 instancias: 0.026 s.
+
+![Figura 13. Shapley exacto propio contra TreeSHAP interventional (30 valores).](outputs/task2/figures/fig_2_5_own_vs_shap.png)
+
+*Figura 13. Shapley exacto propio contra TreeSHAP interventional (30 valores).*
+
+El error contra TreeSHAP (2.4e-08) es mucho mayor que el de la eficiencia del cálculo propio
+(2.2e-16), lo que es coherente con que TreeSHAP acumule en precisión simple y el cálculo propio en float64.
+
+## Task 2.6 - Análisis
+
+### (a) Aditividad en log-odds frente a probabilidad (cliente rechazado)
+
+Cliente de la posición 1: p(x) = 0.0871, f(x) = -2.3490, φ0 = 1.4307, σ(φ0) = 0.8070.
+
+| Cantidad | Valor |
+|---|---|
+| Σ<sub>j</sub> φ<sub>j</sub> | -3.7798 |
+| f(x) − φ0 | -3.7798 |
+| p(x) − σ(φ0) | -0.7199 |
+| Σ<sub>j</sub> [σ(φ0 + φ<sub>j</sub>) − σ(φ0)] | -0.7699 |
+| [p(x) − σ(φ0)] − Σ<sub>j</sub> [σ(φ0 + φ<sub>j</sub>) − σ(φ0)] | +0.0500 |
+
+Mayores efectos individuales en probabilidad:
+
+| Variable | σ(φ0 + φ_j) − σ(φ0) |
+|---|---|
+| `duration` | -0.1834 |
+| `other_payment_plans` | -0.1558 |
+| `checking_status` | -0.1071 |
+| `purpose` | -0.1046 |
+| `savings_status` | +0.1025 |
+
+La suma de los φ coincide con f(x) − φ0 porque la función explicada es f (el log-odds) y los valores de Shapley son aditivos en esa escala. La probabilidad
+es σ(f), y σ no es lineal: σ(a + b) − σ(a) ≠ [σ(φ0 + φ_1) − σ(φ0)] + [σ(φ0 + φ_2) − σ(φ0)] porque cada término evalúa la pendiente de σ en
+un punto distinto (φ0 + φ_j) y no en el punto final (f(x) = -2.349). Con estos números, la suma de efectos individuales (-0.7699) sobreestima la magnitud del
+cambio real de probabilidad (-0.7199) en 0.0500.
+
+### (b) Mayor desacuerdo entre las dos importancias: `age`
+
+`age` ocupa el puesto 6 por I<sub>j</sub> (0.2886) y el 20 por permutación (-0.0054 ± 0.0096; diferencia de 14 puestos).
+I<sub>j</sub> mide cuánto mueve la variable el log-odds de las predicciones (contribución media absoluta, sin mirar si acierta); la permutación mide cuánto
+cae el AUC en el conjunto de prueba al romper la relación entre la variable y el resultado.
+
+Evidencia calculada: sus mayores correlaciones de Spearman (entrenamiento) son `housing` (-0.31), `employment` (+0.31), `personal_status` (+0.27); el máximo en valor absoluto es 0.31, bajo, por lo que la correlación con otras variables no explica el desacuerdo.
+La desviación de la permutación (0.0096) es al menos tan grande como el valor absoluto de su media (0.0054), así que su efecto sobre el AUC no se distingue de cero y la media es negativa (mezclar la variable no empeora el AUC).
+Además, hacen falta 52 de 200 clientes (26.0%) para acumular la mitad de su Σ|φ|, de modo que su efecto está repartido y no concentrado en pocos clientes.
+**Hipótesis** (no se probó con un experimento adicional): el modelo usa `age` (53 valores distintos, con lo que los árboles pueden ajustar con ella detalles del entrenamiento) sin que ese uso mejore el AUC en prueba. Con un
+conjunto de prueba de 200 clientes y una sola semilla, esta explicación es tentativa.
+
+### (c) Crédito entre la variable y su copia (tabla de 2.3)
+
+En el modelo interventional, `credit_amount` recibe 0.5180 y la copia 0.4284 (54.7% para el original); con `tree_path_dependent`,
+0.3812 y 0.3629 (51.2%). El axioma de simetría de Shapley pediría un reparto igual (50 %) si el modelo tratara las dos columnas de forma
+simétrica, y el reparto observado se acerca más a ese 50 % con tree_path_dependent (desviación de 1.2 puntos frente a 4.7). No es exacto porque la simetría es una propiedad de la función
+explicada y no del método: los árboles eligen en cada división una de las dos columnas casi idénticas, el ruido del 5 % rompe los empates y el f ajustado no es simétrico en ellas.
+La correlación entre φ_orig y φ_copia es -0.30 (interventional) y -0.08 (`tree_path_dependent`).
+
+La suma de ambas contribuciones (0.5457 y 0.5303) se compara con I<sub>j</sub> = 0.4907 del modelo sin copia
+(+11.2 % y +8.1 %), mientras que cada columna por separado queda por debajo de esa suma. Con `interventional`, el
+fondo rompe la dependencia entre columnas (evalúa combinaciones del original de un cliente con la copia de otro, que no ocurren en los datos); con `tree_path_dependent` sólo se usan las
+proporciones de entrenamiento (`cover`) a lo largo de cada camino del árbol. Esta última **no** equivale a la esperanza condicional verdadera: sólo captura la dependencia que los
+propios cortes del árbol reflejan y la ignora donde las divisiones no la expresan. Para una importancia real, esto significa que variables casi duplicadas se reparten el crédito (aquí, ninguna de las dos alcanza por sí sola la suma) y que la importancia
+individual de cada una subestima la del concepto compartido; conviene sumar los grupos correlacionados, como la columna "suma" de la tabla.
+
+### (d) Costo computacional
+
+| k | Evaluaciones del modelo | Tiempo KernelSHAP (s) | Tiempo / evaluación (µs) | MAE |
+|---|---|---|---|---|
+| 10 | 200,010 | 0.70 | 3.51 | 0.0347 |
+| 50 | 1,000,010 | 1.98 | 1.98 | 0.0416 |
+| 100 | 2,000,010 | 3.85 | 1.92 | 0.0301 |
+
+Tiempo por evaluación entre k = 50 y k = 100: 1.98 µs y 1.92 µs (diferencia de 3.1%); con k = 10 es 3.51 µs. El tiempo crece de forma aproximadamente lineal con nsamples·k (para k ≥ 50); el costo por evaluación más alto
+con k = 10 sugiere un costo fijo por instancia que se amortiza al subir k. El MAE no disminuye de forma monótona con k (0.0347 → 0.0416 → 0.0301); con k = 100 es 13.4% menor que con k = 10.
+Con 10 instancias y una sola corrida (el muestreo de KernelSHAP es aleatorio) este experimento no basta para afirmar que más fondo reduzca el error de forma sistemática.
+
+Con un tiempo de `decision_function` sobre 100 filas de 1.119 ms (mediana de 30 repeticiones), el Shapley exacto con 20 variables requiere
+2<sup>20</sup> coaliciones × t(100) ≈ **1173 s (0.33 h) por instancia**, frente a 0.385 s de KernelSHAP con k = 100
+(3048 veces menos). Con 60 variables y 1 µs por evaluación, 2<sup>60</sup> × 10<sup>−6</sup> s ≈ **3.653e+04 años** por instancia, por lo que el cálculo exacto es inviable
+y se necesitan aproximaciones (KernelSHAP) o estructura del modelo (TreeSHAP).
+
+**Prompt utilizado**
+
+Usa German Credit con `fetch_openml("credit-g", version=1)`, codifica `good`=1 y `bad`=0, pasa las 13 categóricas por un `OrdinalEncoder` (tratando los códigos como numéricos) y divide 80/20 estratificado con semilla 42. Entrena un `GradientBoostingClassifier` con 200 árboles y profundidad 3. Para SHAP usa `TreeExplainer` con `feature_perturbation="interventional"` y `model_output="raw"`, de modo que la salida explicada sea el log-odds de `decision_function`, con un fondo de 100 filas del entrenamiento elegidas con la semilla. Verifica la eficiencia y que el valor base sea el promedio del log-odds en el fondo, compara la importancia media |φ| con `permutation_importance` (AUC, 10 repeticiones) usando Spearman, y en KernelSHAP usa exactamente el mismo fondo que en TreeSHAP para que el error compare lo mismo. La fórmula de Shapley del 2.5 la quiero escrita a mano: enumera las 64 coaliciones con máscaras de bits, evalúalas todas en una sola llamada al modelo y usa los pesos |S|!(n−|S|−1)!/n!. Guarda los números en `outputs/task2/results.json` e imprime una tabla de verificaciones OK/FALLO con tolerancias.
+
+**Por qué funcionó este prompt**
+
+Fijamos los detalles que cambian los números en lugar de pedir simplemente "calcula SHAP". Con `model_output="raw"` SHAP explica el log-odds; sin eso explicaría otra salida y la eficiencia en log-odds no cerraría. Nombrar `interventional` frente a `tree_path_dependent` evitó que la librería escogiera una de las dos por defecto sin que lo supiéramos. Usar el mismo fondo en KernelSHAP y en TreeSHAP hizo que el MAE midiera sólo la aproximación y no un cambio de referencia. Pedir las 64 coaliciones vectorizadas en una sola llamada permitió que el cálculo exacto corriera en segundos, y las verificaciones automáticas con tolerancias detectaron errores antes de escribir el informe.
+
+<!-- INFORME_TASK2:FIN -->

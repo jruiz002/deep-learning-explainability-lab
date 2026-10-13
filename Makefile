@@ -1,6 +1,6 @@
 PY = .venv/bin/python
 
-.PHONY: setup test task1 images clean
+.PHONY: setup test task1 task2 images clean
 
 setup:
 	python3.11 -m venv .venv
@@ -17,5 +17,8 @@ test:
 task1:
 	$(PY) scripts/run_task1.py
 
+task2:
+	$(PY) scripts/run_task2.py
+
 clean:
-	rm -rf outputs/task1
+	rm -rf outputs/task1 outputs/task2
