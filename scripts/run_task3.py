@@ -27,6 +27,7 @@ def main() -> None:
     viz_task3.fig_lime_coefs(run.results, fig / "fig_3_1_coefs.png")
     viz_task3.fig_stability(run.results, fig / "fig_3_2_stability.png")
     viz_task3.fig_lime_vs_shap(run.results, fig / "fig_3_3_lime_vs_shap.png")
+    viz_task3.fig_counterfactuals(run.results, fig / "fig_3_4_counterfactuals.png")
 
     report.write_json(run.results, config.OUTPUT_DIR_T3 / "results.json")
     report.update_readme_block(

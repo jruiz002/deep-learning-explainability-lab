@@ -78,3 +78,25 @@ def fig_lime_vs_shap(results: dict, out: Path) -> Path:
     ax.set_title("Cliente rechazado: fidelidad según K", fontsize=8.5)
     fig.tight_layout()
     return _save(fig, out)
+
+
+def fig_counterfactuals(results: dict, out: Path) -> Path:
+    """3.4: P(good) of the rejected client and of the three counterfactuals, with the changes of each one."""
+    t = results["t3_4"]
+    labels = ["original"] + [
+        "\n".join(f"{c['feature']}: {c['original']} → {c['new']}" for c in s["changes"]) + f"\n(d = {s['distance']:.2f})"
+        for s in t["selected"]]
+    ps = [t["p_good_original"]] + [s["p_good"] for s in t["selected"]]
+    fig, ax = plt.subplots(figsize=(8.5, 1.15 * len(ps) + 0.8))
+    y = np.arange(len(ps))[::-1]
+    ax.barh(y, ps, color=[MUTED] + [ACCENT] * (len(ps) - 1), height=0.6)
+    ax.axvline(t["threshold"], color=ORANGE, ls="--", lw=1.2, label=f"θ = {t['threshold']:g}")
+    for yi, p in zip(y, ps):
+        ax.text(p + 0.01, yi, f"{p:.3f}", va="center", fontsize=8)
+    ax.set_yticks(y, labels, fontsize=7.5)
+    ax.set_xlim(0, 1)
+    ax.set_xlabel("P(good)")
+    ax.legend(frameon=False, fontsize=8, loc="lower right")
+    ax.set_title(f"Contrafactuales del cliente rechazado ({t['n_valid']} válidos de {t['n_candidates']:,})", fontsize=9)
+    fig.tight_layout()
+    return _save(fig, out)

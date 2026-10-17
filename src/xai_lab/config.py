@@ -77,3 +77,12 @@ TOL_LIME = 1e-8  # closed-form ridge vs lstsq / sklearn Ridge (float64; errors a
 # 3.3 LIME vs SHAP and fidelity as a function of K
 LIME_K_VALUES = (3, 5, 10, 20)
 TOP_COMPARE = 3  # size of the "top variables" sets compared between LIME and SHAP
+
+# 3.4 counterfactuals (sampling search on the rejected client)
+CF_N_CANDIDATES = 20_000
+CF_MAX_CHANGES = 3
+CF_MAX_CHANGES_FALLBACK = 5  # used (and reported) only if no candidate is valid with CF_MAX_CHANGES
+CF_THRESHOLD = 0.5  # valid when P(good) >= theta
+CF_N_SELECTED = 3
+CF_IMMUTABLE = ("age", "personal_status", "foreign_worker")
+CF_ACTIONABLE = ("duration", "credit_amount", "installment_commitment", "checking_status", "savings_status")

@@ -138,6 +138,7 @@ Cliente rechazado (posición {t2['test_position']}); para cada combinación de N
 {n_txt}{s_txt}; el valor más alto es {_f(best[0])} (N = {best[1]}, σ_rel = {best[2]:g}) y el más bajo {_f(worst[0])} (N = {worst[1]}, σ_rel = {worst[2]:g}). {e_txt}
 
 {_render_3_3(results, fig)}
+{_render_3_4(results, fig)}
 **Prompt utilizado**
 
 {PROMPT}
@@ -187,4 +188,39 @@ La correlación va de {_f(rho[lo])} (cliente {lo}) a {_f(rho[hi])} (cliente {hi}
 R²_w crece con K ({"; ".join(gains)}), pero incluso con las 20 variables el modelo lineal en z' explica sólo {r2[-1]:.1%} de la varianza
 ponderada de P(good). El límite no lo pone K sino la forma del modelo sustituto: un modelo aditivo en presencia/ausencia no puede
 representar las interacciones del modelo de árboles (ver 3.5(b)).
+"""
+
+
+def _render_3_4(results: dict, fig) -> str:
+    t = results["t3_4"]
+    sc = t["scales"]
+    sc_txt = ", ".join(f"`{n}` = {v['value']:g} ({v['kind']})" for n, v in sc.items())
+    rows = []
+    for i, s in enumerate(t["selected"], 1):
+        rows.append([str(i), _join([c["feature"] for c in s["changes"]]),
+                     "; ".join(f"{c['original']} → {c['new']}" for c in s["changes"]), _f(s["distance"]), _f(s["p_good"])])
+    by_m = t["by_n_changed"]
+    m_txt = "; ".join(f"{m} variable{'s' if int(m) > 1 else ''}: {v['valid']} de {v['candidates']:,}" for m, v in by_m.items())
+    fb = (f"Ningún candidato fue válido con {results['config'].get('cf_max', 3)} cambios, así que se aumentó el máximo a "
+          f"{t['max_changes']} variables." if t["fallback_to_5"] else
+          f"Hubo candidatos válidos con el máximo de {t['max_changes']} variables, por lo que no fue necesario subirlo a 5.")
+    return f"""## Task 3.4 - Explicaciones contrafactuales
+
+Cliente rechazado (posición {t['test_position']}, P(good) = {_f(t['p_good_original'])}). Se generaron {t['n_candidates']:,} candidatos; cada uno
+cambia un número uniforme de 1 a {t['max_changes']} variables accionables ({_join(t['actionable'])}) elegidas al azar, con valores tomados
+al azar de los valores observados en el entrenamiento distintos del original (con su frecuencia). Las inmutables ({_join(t['immutable'])})
+y el resto de variables no se modifican. Un candidato es válido si P(good) ≥ θ = {t['threshold']:g}. Escalas de la distancia: {sc_txt};
+las categóricas cuentan 1 si cambian.
+
+{chr(10).join(_table(["#", "Variables modificadas", "Original → nuevo", "Distancia", "P(good)"], rows))}
+{fig("fig_3_4_counterfactuals.png", "P(good) del cliente rechazado y de los tres contrafactuales seleccionados (línea: umbral θ).")}
+| Métrica | Valor |
+|---|---|
+| Validez (candidatos válidos / total) | **{t['validity']:.3%}** ({t['n_valid']} de {t['n_candidates']:,}) |
+| Proximidad promedio (3 seleccionados) | **{_f(t['proximity_selected'])}** (todos los válidos: {_f(t['proximity_valid'])}) |
+| Dispersión: variables cambiadas en promedio (3 seleccionados) | **{t['sparsity_selected']:.1f}** (todos los válidos: {t['sparsity_valid']:.1f}) |
+| Máximo P(good) entre todos los candidatos | {_f(t['max_p_good_candidates'])} |
+
+Válidos según el número de variables cambiadas: {m_txt}. {fb} Ningún cambio de una o dos variables basta para pasar el umbral, de modo que
+el rechazo no depende de una sola variable accionable.
 """

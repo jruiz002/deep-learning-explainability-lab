@@ -1,4 +1,4 @@
-"""Experiments of Task 3: LIME from scratch (3.1, 3.2) and its comparison with SHAP (3.3)."""
+"""Experiments of Task 3: LIME from scratch (3.1 - 3.3) and counterfactuals (3.4)."""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ import sklearn
 from scipy.stats import spearmanr
 from sklearn.linear_model import Ridge
 
-from . import config, credit, lime_tabular as lt
+from . import config, counterfactual as cf, credit, lime_tabular as lt
 
 
 @dataclass
@@ -50,7 +50,8 @@ def run_task3(seed: int = config.SEED) -> Task3Run:
     clients = credit.select_clients(p_test)
     cfg = {"seed": seed, "n": config.LIME_N, "k": config.LIME_K, "lambda": config.LIME_LAMBDA,
            "sigma_rel": config.LIME_SIGMA_REL, "d_prime": config.LIME_D_PRIME,
-           "sigma": config.LIME_SIGMA_REL * float(np.sqrt(config.LIME_D_PRIME)), "intercept_penalized": False}
+           "sigma": config.LIME_SIGMA_REL * float(np.sqrt(config.LIME_D_PRIME)), "intercept_penalized": False,
+           "cf_max": config.CF_MAX_CHANGES}
     res: dict = {"environment": {"seed": seed, "python": platform.python_version(), "sklearn": sklearn.__version__,
                                  "shap": shap.__version__, "numpy": np.__version__, "pandas": pd.__version__}, "config": cfg}
 
@@ -101,6 +102,9 @@ def run_task3(seed: int = config.SEED) -> Task3Run:
     phi_p = dict(zip(clients, np.asarray(tree_p.shap_values(rows, check_additivity=False))))
     res["t3_3"] = _t3_3(clients, lime_runs, phi, phi_p, names, x, predict, X_train, seed)
 
+    # ---- 3.4 ------------------------------------------------------------------------------
+    res["t3_4"] = _t3_4(d, sp, model, clients["rechazado"], seed)
+
     res["time_s"] = time.perf_counter() - t0
     return Task3Run(res)
 
@@ -135,3 +139,49 @@ def _t3_3(clients, lime_runs, phi, phi_p, names, x_rej, predict, X_train, seed) 
         r = lt.explain(x_rej, predict, X_train, names, k=k, seed=seed)  # same seed -> same 5000 samples for every K
         b.append({"k": k, "r2w": r.r2w, "features": r.features})
     return {"a": a, "b": {"client": "rechazado", "by_k": b}}
+
+
+def _t3_4(d: credit.CreditData, sp: credit.Split, model, pos: int, seed: int) -> dict:
+    """Sampling search of counterfactuals for the rejected client (max. 3 actionable changes, 5 if none is valid)."""
+    names = d.feature_names
+    X_train = sp.X_train.to_numpy()
+    x = sp.X_test.iloc[pos].to_numpy()
+    predict = lambda Z: credit.proba_good(model, pd.DataFrame(Z, columns=names))
+    idx = lambda cols: [names.index(c) for c in cols]
+    act, num, cat = idx(config.CF_ACTIONABLE), idx(d.numeric), idx(d.categorical)
+    assert not set(config.CF_ACTIONABLE) & set(config.CF_IMMUTABLE)
+    t0 = time.perf_counter()
+    cs = cf.search(x, predict, X_train, act, num, cat, config.CF_N_CANDIDATES, config.CF_MAX_CHANGES, config.CF_THRESHOLD, seed)
+    fallback = not cs.valid.any()
+    if fallback:
+        cs = cf.search(x, predict, X_train, act, num, cat, config.CF_N_CANDIDATES, config.CF_MAX_CHANGES_FALLBACK,
+                       config.CF_THRESHOLD, seed)
+    elapsed = time.perf_counter() - t0
+    chosen = cf.select_diverse(cs, config.CF_N_SELECTED)
+    scale = cf.robust_scale(X_train, num)
+    n_changed = cs.changed.sum(axis=1)
+    sel = []
+    for i in chosen:
+        cols = np.flatnonzero(cs.changed[i])
+        sel.append({
+            "changes": [{"feature": names[j], "original": d.decode(names[j], x[j]), "new": d.decode(names[j], cs.candidates[i, j]),
+                         "cost": float(abs(cs.candidates[i, j] - x[j]) / scale[j][0]) if j in scale else 1.0} for j in cols],
+            "distance": float(cs.distance[i]), "p_good": float(cs.p_good[i]), "n_changed": int(len(cols)),
+        })
+    by_m = {int(m): {"candidates": int((n_changed == m).sum()), "valid": int((cs.valid & (n_changed == m)).sum())}
+            for m in range(1, cs.max_changes + 1)}
+    by_f = {names[j]: {"candidates": int(cs.changed[:, j].sum()), "valid": int((cs.valid & cs.changed[:, j]).sum())}
+            for j in act}
+    return {
+        "client": "rechazado", "test_position": pos, "p_good_original": float(predict(x[None])[0]),
+        "n_candidates": config.CF_N_CANDIDATES, "max_changes": cs.max_changes, "fallback_to_5": fallback,
+        "threshold": config.CF_THRESHOLD, "actionable": list(config.CF_ACTIONABLE), "immutable": list(config.CF_IMMUTABLE),
+        "scales": {names[j]: {"value": v, "kind": k} for j, (v, k) in scale.items() if names[j] in config.CF_ACTIONABLE},
+        "n_valid": int(cs.valid.sum()), "validity": float(cs.valid.mean()), "by_n_changed": by_m, "by_feature": by_f,
+        "selected": sel,
+        "proximity_selected": float(np.mean([s["distance"] for s in sel])) if sel else None,
+        "sparsity_selected": float(np.mean([s["n_changed"] for s in sel])) if sel else None,
+        "proximity_valid": float(cs.distance[cs.valid].mean()) if cs.valid.any() else None,
+        "sparsity_valid": float(n_changed[cs.valid].mean()) if cs.valid.any() else None,
+        "max_p_good_candidates": float(cs.p_good.max()), "time_s": elapsed,
+    }

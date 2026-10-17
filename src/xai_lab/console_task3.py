@@ -29,12 +29,22 @@ def collect_checks(results: dict) -> list[tuple[str, float, float, bool]]:
         ("3.2 N_ef medio por encima de N (o no positivo)", max(max(0.0, v - n, -v) for n, v in n_eff_cells), 1e-9),
         ("3.2 pares por celda distintos de C(20, 2) = 190", float(max(abs(c["n_pairs"] - 190) for c in t2["cells"])), 1e-12),
     ]
+    if "t3_4" in results:
+        t4 = results["t3_4"]
+        sel = t4["selected"]
+        feats = [{c["feature"] for c in s["changes"]} for s in sel]
+        out += [
+            ("3.4 contrafactuales seleccionados con P(good) < theta", max(_outside(s["p_good"], t4["threshold"], 1.0) for s in sel), 1e-12),
+            ("3.4 seleccionados que cambian una variable no accionable", float(sum(len(f - set(t4["actionable"])) for f in feats)), 0.5),
+            ("3.4 seleccionados con el mismo conjunto de variables", float(len(feats) - len({frozenset(f) for f in feats})), 0.5),
+            ("3.4 |distancia - suma de costos por variable|", max(abs(s["distance"] - sum(c["cost"] for c in s["changes"])) for s in sel), 1e-9),
+        ]
     return [(d, v, t, v < t) for d, v, t in out]
 
 
 def render_console(results: dict, figures: list[str], elapsed: float) -> tuple[str, bool]:
     env, cfg, t1, t2 = results["environment"], results["config"], results["t3_1"], results["t3_2"]
-    L: list[str] = ["=" * WIDTH, " LABORATORIO DE EXPLICABILIDAD - TASK 3", " LIME tabular desde cero (NumPy) sobre German Credit", "=" * WIDTH]
+    L: list[str] = ["=" * WIDTH, " LABORATORIO DE EXPLICABILIDAD - TASK 3", " LIME desde cero, comparación con SHAP y contrafactuales (German Credit)", "=" * WIDTH]
     L += [f" Entorno     semilla {env['seed']}, Python {env['python']}",
           f" Versiones   scikit-learn {env['sklearn']} | numpy {env['numpy']} | pandas {env['pandas']}",
           f" Parámetros  N = {cfg['n']}, K = {cfg['k']}, lambda = {cfg['lambda']}, sigma_rel = {cfg['sigma_rel']}, "
@@ -61,6 +71,14 @@ def render_console(results: dict, figures: list[str], elapsed: float) -> tuple[s
                            [[k, f"{c['spearman']:.3f}", ", ".join(c["top_lime"]), ", ".join(c["top_shap"]), f"{c['top_overlap']}/3"]
                             for k, c in a.items()], "lrllr")
         L += ["", " R2_w del cliente rechazado según K:"] + _table(["K", "R2_w"], [[str(r["k"]), f"{r['r2w']:.4f}"] for r in b["by_k"]])
+        t4 = results["t3_4"]
+        L += _title("Task 3.4  Contrafactuales (cliente rechazado)")
+        L += ["", f" p(good) original = {t4['p_good_original']:.4f}; {t4['n_valid']} válidos de {t4['n_candidates']} "
+                  f"(validez {t4['validity']:.4%}); máx. {t4['max_changes']} cambios" + (" (se subió a 5)" if t4["fallback_to_5"] else "")]
+        L += _table(["#", "Cambios", "Distancia", "P(good)"],
+                    [[str(i), "; ".join(f"{c['feature']}: {c['original']} -> {c['new']}" for c in s["changes"]), f"{s['distance']:.3f}",
+                      f"{s['p_good']:.4f}"] for i, s in enumerate(t4["selected"], 1)], "rlrr")
+        L += ["", f" Proximidad promedio {t4['proximity_selected']:.3f}; dispersión promedio {t4['sparsity_selected']:.1f} variables"]
 
     checks = collect_checks(results)
     L += _title("Verificaciones numéricas")
