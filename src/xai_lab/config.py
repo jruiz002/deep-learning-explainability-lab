@@ -100,3 +100,6 @@ FIGURES_DIR_T4 = OUTPUT_DIR_T4 / "figures"
 PERTURB_STEPS = 20  # P: fraction k / P of the pixels is removed (deletion) or inserted (insertion) at step k
 PERTURB_RANDOM_ORDERS = 10
 BLUR_SIGMA = 10.0  # Gaussian blur (pixels) of the insertion start image and of the blurred deletion reference
+CASCADE_STAGES = ("fc", "layer4", "layer3", "layer2", "layer1", "conv1")  # re-initialised cumulatively, top to bottom
+CASCADE_SPEARMAN_LOW = 0.3  # 4.3(b): stage where the correlation with the original map first drops below this
+TOL_CASCADE_FC = 1e-4  # 4.3(b): fc-only stage map vs sum_k w_rand_k A^k / Z with the original activations (float32)
