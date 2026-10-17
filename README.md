@@ -80,7 +80,7 @@ tests/               pruebas de las identidades matemáticas, geometría y hooks
 - Preprocesamiento: redimensión a 256 píxeles en el lado corto, recorte central de 224×224 y normalización por canal con
   media (0.485, 0.456, 0.406) y desviación estándar (0.229, 0.224, 0.225).
 - Semilla aleatoria: **42** (Python, NumPy y PyTorch). Ejecución en CPU con float32.
-- Versiones: torch 2.14.1, torchvision 0.29.1, Python 3.11.2.
+- Versiones: torch 2.14.1+cpu, torchvision 0.29.1+cpu, Python 3.12.13.
 
 ## Task 1.1 - Modelo e imágenes
 
@@ -144,31 +144,31 @@ cada imagen, con Z = 49.
 
 | Imagen | Clase | Logit y^c | (1/Z) Σ M + b_c | Error absoluto |
 |---|---|---|---|---|
-| a | golden retriever (#207) | 18.294334 | 18.294336 | 1.91e-06 |
-| b | Chihuahua (#151) | 11.057706 | 11.057705 | 9.54e-07 |
-| c | trimaran (#871) | 10.640809 | 10.640808 | 9.54e-07 |
+| a | golden retriever (#207) | 18.294334 | 18.294334 | 0.00e+00 |
+| b | Chihuahua (#151) | 11.057702 | 11.057701 | 9.54e-07 |
+| c | trimaran (#871) | 10.640806 | 10.640806 | 0.00e+00 |
 
 **(c)** Error absoluto máximo entre Z·L^c (sin ReLU ni normalización) y M^c sobre las 49 posiciones:
 
 | Imagen | Clase | Error abs. máximo |
 |---|---|---|
-| a | golden retriever (#207) | 1.14e-05 |
-| b | Chihuahua (#151) | 7.63e-06 |
-| c | trimaran (#871) | 5.72e-06 |
+| a | golden retriever (#207) | 1.34e-05 |
+| b | Chihuahua (#151) | 1.53e-05 |
+| c | trimaran (#871) | 9.54e-06 |
 
 **(d)** Error absoluto máximo entre ambos mapas después de ReLU y normalización mínimo-máximo:
 
 | Imagen | Clase | Error abs. máximo |
 |---|---|---|
 | a | golden retriever (#207) | 4.17e-07 |
-| b | Chihuahua (#151) | 2.38e-07 |
-| c | trimaran (#871) | 1.79e-07 |
+| b | Chihuahua (#151) | 4.17e-07 |
+| c | trimaran (#871) | 2.98e-07 |
 
 ![Figura 3. CAM (M^c), Z·L^c de Grad-CAM y sus diferencias, por imagen.](outputs/task1/figures/fig_1_3_cam_vs_gradcam.png)
 
 *Figura 3. CAM (M^c), Z·L^c de Grad-CAM y sus diferencias, por imagen.*
 
-La descomposición del logit se cumplió con un error absoluto máximo de 1.91e-06 y la igualdad Z·L^c = M^c con un error máximo de 1.14e-05, valores del orden de la
+La descomposición del logit se cumplió con un error absoluto máximo de 9.54e-07 y la igualdad Z·L^c = M^c con un error máximo de 1.53e-05, valores del orden de la
 precisión de float32. Tras aplicar ReLU y normalización, el error máximo entre ambos mapas fue de 4.17e-07. La comparación del inciso (c)
 se realizó antes de ReLU y normalización porque esas operaciones no son lineales y ocultarían la igualdad. En esta arquitectura, por lo tanto,
 Grad-CAM y CAM producen el mismo mapa.
@@ -181,15 +181,15 @@ Grad-CAM y CAM producen el mismo mapa.
 |---|---|---|---|---|
 | 28 | 0.288863 | 0.0058951629 | 0.0058951633 | 6.77e-08 |
 | 242 | 0.255639 | 0.0052171177 | 0.0052171179 | 3.83e-08 |
-| 156 | 0.246214 | 0.0050247773 | 0.0050247771 | 3.59e-08 |
-| 473 | 0.223402 | 0.0045592198 | 0.0045592198 | 4.17e-09 |
+| 156 | 0.246214 | 0.0050247782 | 0.0050247771 | 2.21e-07 |
+| 473 | 0.223402 | 0.0045592193 | 0.0045592198 | 9.80e-08 |
 | 497 | 0.210018 | 0.0042860918 | 0.0042860915 | 5.32e-08 |
 
 ![Figura 4. α_k^c contra w_k^c/Z en los 512 canales (en círculo, los cinco de mayor peso).](outputs/task1/figures/fig_1_4a_alpha_vs_w.png)
 
 *Figura 4. α_k^c contra w_k^c/Z en los 512 canales (en círculo, los cinco de mayor peso).*
 
-El error relativo máximo observado en los cinco canales fue de 6.77e-08. Como y^c = (1/Z) Σ_k w_k Σ_ij A^k_ij + b_c, la derivada
+El error relativo máximo observado en los cinco canales fue de 2.21e-07. Como y^c = (1/Z) Σ_k w_k Σ_ij A^k_ij + b_c, la derivada
 ∂y^c/∂A^k_ij = w_k/Z **es la misma en todas las posiciones (i, j)**, porque el pooling global promedia dando el mismo peso 1/Z a cada posición.
 Ese hecho se usa al promediar espacialmente el gradiente: el promedio de Z valores idénticos es ese mismo valor, por lo que α_k^c = w_k^c/Z.
 
@@ -245,7 +245,7 @@ cambio puede deberse a ello y no sólo a la eliminación de información) y el r
 
 ## Conclusiones
 
-- Grad-CAM y CAM coincidieron numéricamente en ResNet-18 (errores máximos de 1.1e-05 en float32), porque α_k^c = w_k^c/Z.
+- Grad-CAM y CAM coincidieron numéricamente en ResNet-18 (errores máximos de 1.5e-05 en float32), porque α_k^c = w_k^c/Z.
 - Los mapas distinguieron las clases de una misma imagen (IoU de 0.0003 en (b)), pero su resolución de 7×7 limita la localización de objetos pequeños o cercanos entre sí.
 - Un mapa de calor por sí solo no demuestra que el modelo use o ignore el fondo; la prueba causal con gris lo complementó y en (c) mostró evidencia parcial de dependencia del fondo, aunque no la de un atajo total.
 
@@ -260,7 +260,7 @@ cambio puede deberse a ello y no sólo a la eliminación de información) y el r
 - Datos: German Credit (`fetch_openml("credit-g", version=1)`), 1000 clientes y 20 variables
   (13 categóricas y 7 numéricas). Objetivo: `good` = 1, `bad` = 0.
 - Semilla aleatoria: **42** (partición, modelo, fondo, permutaciones y ruido de 2.3).
-- Versiones: scikit-learn 1.9.0, shap 0.53.0, NumPy 2.5.2, pandas 3.0.5, Python 3.14.7.
+- Versiones: scikit-learn 1.9.1, shap 0.54.1, NumPy 2.5.2, pandas 3.0.6, Python 3.12.13.
 - Limitación: las 13 categóricas se codificaron con `OrdinalEncoder`, cuyos códigos siguen el orden alfabético de las categorías y no un
   orden con significado, pero el modelo los trata como numéricos. Por eso un umbral de un árbol sobre una categórica agrupa categorías por su
   código, y los φ de esas variables resumen el efecto de ese código y no el de una categoría por separado.
@@ -285,7 +285,7 @@ Se usó `TreeExplainer(model, data=fondo, feature_perturbation="interventional",
 
 ### (a) Eficiencia
 
-max<sub>n</sub> |φ0 + Σ<sub>j</sub> φ<sub>j</sub>(x<sub>n</sub>) − f(x<sub>n</sub>)| = **9.70e-08**
+max<sub>n</sub> |φ0 + Σ<sub>j</sub> φ<sub>j</sub>(x<sub>n</sub>) − f(x<sub>n</sub>)| = **9.66e-08**
 (dentro de la tolerancia de 1e-6; el error no es cero y es del orden de la precisión simple, lo que sugiere que la extensión en C++ de TreeSHAP no calcula todo en float64).
 
 ### (b) Valor base
@@ -303,9 +303,9 @@ I<sub>j</sub> = mean|φ<sub>j</sub>| sobre la prueba; permutación con AUC, 10 r
 | # | mean\|φ\| (variable) | I_j | Permutación (variable) | Caída de AUC |
 |---|---|---|---|---|
 | 1 | `checking_status` | 0.7603 | `checking_status` | 0.1190 |
-| 2 | `purpose` | 0.5117 | `credit_amount` | 0.0764 |
-| 3 | `credit_amount` | 0.4907 | `duration` | 0.0579 |
-| 4 | `duration` | 0.3917 | `credit_history` | 0.0396 |
+| 2 | `purpose` | 0.5118 | `credit_amount` | 0.0765 |
+| 3 | `credit_amount` | 0.4908 | `duration` | 0.0581 |
+| 4 | `duration` | 0.3920 | `credit_history` | 0.0396 |
 | 5 | `savings_status` | 0.2963 | `savings_status` | 0.0262 |
 
 Correlación de Spearman entre los vectores completos de las 20 variables: **ρ = 0.645** (p = 0.0021), una concordancia moderada.
@@ -353,16 +353,16 @@ importancia: en `credit_amount`, no hay una relación monótona clara entre el v
 
 ## Task 2.3 - Variable duplicada con ruido
 
-La numérica con mayor I<sub>j</sub> es `credit_amount` (I<sub>j</sub> = 0.4907). Se creó `credit_amount_copy` = x + 0.05·σ·ε, con σ = 2822.7 (calculada en el conjunto
+La numérica con mayor I<sub>j</sub> es `credit_amount` (I<sub>j</sub> = 0.4908). Se creó `credit_amount_copy` = x + 0.05·σ·ε, con σ = 2822.7 (calculada en el conjunto
 completo) y ε ~ N(0, 1) con semilla 42; la correlación entre la variable y su copia es 0.99878. El modelo se reentrenó con 21 variables
 (exactitud 0.760, AUC 0.767) y se usaron las mismas filas de fondo.
 
 | Configuración | mean\|φ_orig\| | mean\|φ_copia\| | mean\|φ_orig + φ_copia\| | % del original | corr(φ_orig, φ_copia) |
 |---|---|---|---|---|---|
-| interventional | 0.5180 | 0.4284 | 0.5457 | 54.7% | -0.30 |
-| tree_path_dependent | 0.3812 | 0.3629 | 0.5303 | 51.2% | -0.08 |
+| interventional | 0.5126 | 0.4286 | 0.5455 | 54.5% | -0.29 |
+| tree_path_dependent | 0.3760 | 0.3667 | 0.5301 | 50.6% | -0.07 |
 
-I<sub>j</sub> de `credit_amount` en el modelo **sin** copia: 0.4907 (es otro modelo, por lo que no es exactamente comparable).
+I<sub>j</sub> de `credit_amount` en el modelo **sin** copia: 0.4908 (es otro modelo, por lo que no es exactamente comparable).
 
 ![Figura 11. Crédito repartido entre la variable y su copia, con ambos métodos de TreeSHAP.](outputs/task2/figures/fig_2_3_duplicate.png)
 
@@ -375,12 +375,12 @@ KernelSHAP (`nsamples` = 2000) sobre las primeras 10 filas de prueba, con fondos
 
 | k | MAE | Error máximo | KernelSHAP (s) | TreeSHAP (s) | KernelSHAP por instancia (s) | Evaluaciones |
 |---|---|---|---|---|---|---|
-| 10 | 0.0347 | 0.6239 | 0.70 | 0.0020 | 0.070 | 200,010 |
-| 50 | 0.0416 | 0.8252 | 1.98 | 0.0097 | 0.198 | 1,000,010 |
-| 100 | 0.0301 | 0.3683 | 3.85 | 0.0189 | 0.385 | 2,000,010 |
+| 10 | 0.0347 | 0.6239 | 0.29 | 0.0015 | 0.029 | 200,010 |
+| 50 | 0.0416 | 0.8252 | 0.83 | 0.0066 | 0.083 | 1,000,010 |
+| 100 | 0.0300 | 0.3683 | 1.48 | 0.0132 | 0.148 | 2,000,010 |
 
 El conteo de evaluaciones supera en 10 (una por instancia, para f(x)) el producto nsamples·k·instancias. Con el mismo fondo, TreeSHAP es entre
-204 y 347 veces más rápido que KernelSHAP (los tiempos dependen de la máquina y de la corrida).
+113 y 197 veces más rápido que KernelSHAP (los tiempos dependen de la máquina y de la corrida).
 
 ![Figura 12. MAE de KernelSHAP contra TreeSHAP y tiempos de cómputo según el tamaño del fondo.](outputs/task2/figures/fig_2_4_kernel_vs_tree.png)
 
@@ -396,13 +396,13 @@ pesos son |S|!(n−|S|−1)!/n!. Resultados de las primeras 5 filas de prueba (l
 |---|---|---|---|---|---|---|---|---|
 | 0 | -0.4652 | +0.3353 | -0.0531 | -0.1108 | +0.3497 | +0.1798 | +0.2356 | +0.2356 |
 | 1 | -1.1706 | +0.0933 | -0.0414 | -0.1200 | -0.3243 | -0.0771 | -1.6400 | -1.6400 |
-| 2 | +0.3183 | -1.4394 | +0.0311 | +0.0155 | +0.5182 | -0.0785 | -0.6348 | -0.6348 |
+| 2 | +0.3207 | -1.4423 | +0.0317 | +0.0155 | +0.5182 | -0.0785 | -0.6348 | -0.6348 |
 | 3 | +0.5520 | +0.6827 | -0.0529 | -0.1470 | +0.5080 | -0.1110 | +1.4318 | +1.4318 |
-| 4 | +0.6726 | -1.5005 | +0.0285 | +0.0134 | +0.9341 | -0.0839 | +0.0643 | +0.0643 |
+| 4 | +0.6726 | -1.5010 | +0.0291 | +0.0134 | +0.9341 | -0.0839 | +0.0643 | +0.0643 |
 
-- Máximo error absoluto contra `TreeExplainer` interventional con el mismo fondo: **2.42e-08**.
-- Eficiencia, máx. |Σφ − (v(N) − v(∅))|: **2.22e-16**; además v(N) coincide con f(x) (error 5.6e-17).
-- Tiempo del cálculo propio para las 5 instancias: 0.026 s.
+- Máximo error absoluto contra `TreeExplainer` interventional con el mismo fondo: **2.43e-08**.
+- Eficiencia, máx. |Σφ − (v(N) − v(∅))|: **2.22e-16**; además v(N) coincide con f(x) (error 4.4e-16).
+- Tiempo del cálculo propio para las 5 instancias: 0.013 s.
 
 ![Figura 13. Shapley exacto propio contra TreeSHAP interventional (30 valores).](outputs/task2/figures/fig_2_5_own_vs_shap.png)
 
@@ -429,7 +429,7 @@ Mayores efectos individuales en probabilidad:
 
 | Variable | σ(φ0 + φ_j) − σ(φ0) |
 |---|---|
-| `duration` | -0.1834 |
+| `duration` | -0.1835 |
 | `other_payment_plans` | -0.1558 |
 | `checking_status` | -0.1071 |
 | `purpose` | -0.1046 |
@@ -454,14 +454,14 @@ conjunto de prueba de 200 clientes y una sola semilla, esta explicación es tent
 
 ### (c) Crédito entre la variable y su copia (tabla de 2.3)
 
-En el modelo interventional, `credit_amount` recibe 0.5180 y la copia 0.4284 (54.7% para el original); con `tree_path_dependent`,
-0.3812 y 0.3629 (51.2%). El axioma de simetría de Shapley pediría un reparto igual (50 %) si el modelo tratara las dos columnas de forma
-simétrica, y el reparto observado se acerca más a ese 50 % con tree_path_dependent (desviación de 1.2 puntos frente a 4.7). No es exacto porque la simetría es una propiedad de la función
+En el modelo interventional, `credit_amount` recibe 0.5126 y la copia 0.4286 (54.5% para el original); con `tree_path_dependent`,
+0.3760 y 0.3667 (50.6%). El axioma de simetría de Shapley pediría un reparto igual (50 %) si el modelo tratara las dos columnas de forma
+simétrica, y el reparto observado se acerca más a ese 50 % con tree_path_dependent (desviación de 0.6 puntos frente a 4.5). No es exacto porque la simetría es una propiedad de la función
 explicada y no del método: los árboles eligen en cada división una de las dos columnas casi idénticas, el ruido del 5 % rompe los empates y el f ajustado no es simétrico en ellas.
-La correlación entre φ_orig y φ_copia es -0.30 (interventional) y -0.08 (`tree_path_dependent`).
+La correlación entre φ_orig y φ_copia es -0.29 (interventional) y -0.07 (`tree_path_dependent`).
 
-La suma de ambas contribuciones (0.5457 y 0.5303) se compara con I<sub>j</sub> = 0.4907 del modelo sin copia
-(+11.2 % y +8.1 %), mientras que cada columna por separado queda por debajo de esa suma. Con `interventional`, el
+La suma de ambas contribuciones (0.5455 y 0.5301) se compara con I<sub>j</sub> = 0.4908 del modelo sin copia
+(+11.2 % y +8.0 %), mientras que cada columna por separado queda por debajo de esa suma. Con `interventional`, el
 fondo rompe la dependencia entre columnas (evalúa combinaciones del original de un cliente con la copia de otro, que no ocurren en los datos); con `tree_path_dependent` sólo se usan las
 proporciones de entrenamiento (`cover`) a lo largo de cada camino del árbol. Esta última **no** equivale a la esperanza condicional verdadera: sólo captura la dependencia que los
 propios cortes del árbol reflejan y la ignora donde las divisiones no la expresan. Para una importancia real, esto significa que variables casi duplicadas se reparten el crédito (aquí, ninguna de las dos alcanza por sí sola la suma) y que la importancia
@@ -471,17 +471,17 @@ individual de cada una subestima la del concepto compartido; conviene sumar los 
 
 | k | Evaluaciones del modelo | Tiempo KernelSHAP (s) | Tiempo / evaluación (µs) | MAE |
 |---|---|---|---|---|
-| 10 | 200,010 | 0.70 | 3.51 | 0.0347 |
-| 50 | 1,000,010 | 1.98 | 1.98 | 0.0416 |
-| 100 | 2,000,010 | 3.85 | 1.92 | 0.0301 |
+| 10 | 200,010 | 0.29 | 1.46 | 0.0347 |
+| 50 | 1,000,010 | 0.83 | 0.83 | 0.0416 |
+| 100 | 2,000,010 | 1.48 | 0.74 | 0.0300 |
 
-Tiempo por evaluación entre k = 50 y k = 100: 1.98 µs y 1.92 µs (diferencia de 3.1%); con k = 10 es 3.51 µs. El tiempo crece de forma aproximadamente lineal con nsamples·k (para k ≥ 50); el costo por evaluación más alto
-con k = 10 sugiere un costo fijo por instancia que se amortiza al subir k. El MAE no disminuye de forma monótona con k (0.0347 → 0.0416 → 0.0301); con k = 100 es 13.4% menor que con k = 10.
+Tiempo por evaluación entre k = 50 y k = 100: 0.83 µs y 0.74 µs (diferencia de 11.2%); con k = 10 es 1.46 µs. El tiempo crece de forma aproximadamente lineal con nsamples·k (para k ≥ 50); el costo por evaluación más alto
+con k = 10 sugiere un costo fijo por instancia que se amortiza al subir k. El MAE no disminuye de forma monótona con k (0.0347 → 0.0416 → 0.0300); con k = 100 es 13.5% menor que con k = 10.
 Con 10 instancias y una sola corrida (el muestreo de KernelSHAP es aleatorio) este experimento no basta para afirmar que más fondo reduzca el error de forma sistemática.
 
-Con un tiempo de `decision_function` sobre 100 filas de 1.119 ms (mediana de 30 repeticiones), el Shapley exacto con 20 variables requiere
-2<sup>20</sup> coaliciones × t(100) ≈ **1173 s (0.33 h) por instancia**, frente a 0.385 s de KernelSHAP con k = 100
-(3048 veces menos). Con 60 variables y 1 µs por evaluación, 2<sup>60</sup> × 10<sup>−6</sup> s ≈ **3.653e+04 años** por instancia, por lo que el cálculo exacto es inviable
+Con un tiempo de `decision_function` sobre 100 filas de 0.653 ms (mediana de 30 repeticiones), el Shapley exacto con 20 variables requiere
+2<sup>20</sup> coaliciones × t(100) ≈ **685 s (0.19 h) por instancia**, frente a 0.148 s de KernelSHAP con k = 100
+(4613 veces menos). Con 60 variables y 1 µs por evaluación, 2<sup>60</sup> × 10<sup>−6</sup> s ≈ **3.653e+04 años** por instancia, por lo que el cálculo exacto es inviable
 y se necesitan aproximaciones (KernelSHAP) o estructura del modelo (TreeSHAP).
 
 **Prompt utilizado**

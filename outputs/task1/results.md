@@ -1,6 +1,6 @@
 # Task 1 - resultados (generado automáticamente)
 
-Semilla `42` - torch 2.14.1 - torchvision 0.29.1 - Python 3.11.2
+Semilla `42` - torch 2.14.1+cpu - torchvision 0.29.1+cpu - Python 3.12.13
 
 ## Task 1.1 - Modelo, preprocesamiento, tres imágenes y top-5
 
@@ -58,25 +58,25 @@ Figuras: `figures/fig_1_2_gradcam.png`
 
 | imagen | clase | logit y^c | (1/Z) sum M + b_c | error absoluto |
 |---|---|---|---|---|
-| a | golden retriever (#207) | 18.294334 | 18.294336 | 1.91e-06 |
-| b | Chihuahua (#151) | 11.057706 | 11.057705 | 9.54e-07 |
-| c | trimaran (#871) | 10.640809 | 10.640808 | 9.54e-07 |
+| a | golden retriever (#207) | 18.294334 | 18.294334 | 0.00e+00 |
+| b | Chihuahua (#151) | 11.057702 | 11.057701 | 9.54e-07 |
+| c | trimaran (#871) | 10.640806 | 10.640806 | 0.00e+00 |
 
 **(c)** Error absoluto máximo entre Z·L^c (sin ReLU ni normalización) y M^c sobre las 49 posiciones.
 
 | imagen | clase | error abs. máximo |
 |---|---|---|
-| a | golden retriever (#207) | 1.14e-05 |
-| b | Chihuahua (#151) | 7.63e-06 |
-| c | trimaran (#871) | 5.72e-06 |
+| a | golden retriever (#207) | 1.34e-05 |
+| b | Chihuahua (#151) | 1.53e-05 |
+| c | trimaran (#871) | 9.54e-06 |
 
 **(d)** Error absoluto máximo entre ambos mapas tras ReLU + normalización min-max.
 
 | imagen | clase | error abs. máximo |
 |---|---|---|
 | a | golden retriever (#207) | 4.17e-07 |
-| b | Chihuahua (#151) | 2.38e-07 |
-| c | trimaran (#871) | 1.79e-07 |
+| b | Chihuahua (#151) | 4.17e-07 |
+| c | trimaran (#871) | 2.98e-07 |
 
 Figuras: `figures/fig_1_3_cam_vs_gradcam.png`
 
@@ -88,8 +88,8 @@ Compara numéricamente el alpha de Grad-CAM con w^c_k / Z para los cinco canales
 |---|---|---|---|---|---|
 | 28 | 0.288863 | 0.0058951629 | 0.0058951633 | 3.99e-10 | 6.77e-08 |
 | 242 | 0.255639 | 0.0052171177 | 0.0052171179 | 2.00e-10 | 3.83e-08 |
-| 156 | 0.246214 | 0.0050247773 | 0.0050247771 | 1.81e-10 | 3.59e-08 |
-| 473 | 0.223402 | 0.0045592198 | 0.0045592198 | 1.90e-11 | 4.17e-09 |
+| 156 | 0.246214 | 0.0050247782 | 0.0050247771 | 1.11e-09 | 2.21e-07 |
+| 473 | 0.223402 | 0.0045592193 | 0.0045592198 | 4.47e-10 | 9.80e-08 |
 | 497 | 0.210018 | 0.0042860918 | 0.0042860915 | 2.28e-10 | 5.32e-08 |
 
 Figuras: `figures/fig_1_4a_alpha_vs_w.png`
