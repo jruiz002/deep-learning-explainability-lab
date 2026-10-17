@@ -73,3 +73,33 @@ LIME_STAB_RUNS = 20  # seeds 0..19 in every cell of the grid
 LIME_STAB_TOP = 5  # how many frequent variables are stored per cell
 
 TOL_LIME = 1e-8  # closed-form ridge vs lstsq / sklearn Ridge (float64; errors are far below this)
+
+# 3.3 LIME vs SHAP and fidelity as a function of K
+LIME_K_VALUES = (3, 5, 10, 20)
+TOP_COMPARE = 3  # size of the "top variables" sets compared between LIME and SHAP
+
+# 3.4 counterfactuals (sampling search on the rejected client)
+CF_N_CANDIDATES = 20_000
+CF_MAX_CHANGES = 3
+CF_MAX_CHANGES_FALLBACK = 5  # used (and reported) only if no candidate is valid with CF_MAX_CHANGES
+CF_THRESHOLD = 0.5  # valid when P(good) >= theta
+CF_N_SELECTED = 3
+CF_IMMUTABLE = ("age", "personal_status", "foreign_worker")
+CF_ACTIONABLE = ("duration", "credit_amount", "installment_commitment", "checking_status", "savings_status")
+
+# 3.5 analysis
+LIME_TARGET_JACCARD = 0.9  # 3.5(a): N needed for this mean Jaccard at sigma_rel = 0.75
+LIME_DISAGREE_SIGMA_REL = (0.25, 0.5, 0.75, 1.5, 3.0)  # 3.5(b): kernel widths of the locality test
+LIME_DISAGREE_SEEDS = 10  # runs per kernel width in the locality test
+COALITION_SAMPLES = 400  # 3.5(b): random coalitions per size in the interaction test
+
+# ---- Task 4 (validating Grad-CAM: deletion / insertion and cascading randomisation) --------
+OUTPUT_DIR_T4 = ROOT / "outputs" / "task4"
+FIGURES_DIR_T4 = OUTPUT_DIR_T4 / "figures"
+
+PERTURB_STEPS = 20  # P: fraction k / P of the pixels is removed (deletion) or inserted (insertion) at step k
+PERTURB_RANDOM_ORDERS = 10
+BLUR_SIGMA = 10.0  # Gaussian blur (pixels) of the insertion start image and of the blurred deletion reference
+CASCADE_STAGES = ("fc", "layer4", "layer3", "layer2", "layer1", "conv1")  # re-initialised cumulatively, top to bottom
+CASCADE_SPEARMAN_LOW = 0.3  # 4.3(b): stage where the correlation with the original map first drops below this
+TOL_CASCADE_FC = 1e-4  # 4.3(b): fc-only stage map vs sum_k w_rand_k A^k / Z with the original activations (float32)
