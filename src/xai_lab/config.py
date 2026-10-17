@@ -92,3 +92,11 @@ LIME_TARGET_JACCARD = 0.9  # 3.5(a): N needed for this mean Jaccard at sigma_rel
 LIME_DISAGREE_SIGMA_REL = (0.25, 0.5, 0.75, 1.5, 3.0)  # 3.5(b): kernel widths of the locality test
 LIME_DISAGREE_SEEDS = 10  # runs per kernel width in the locality test
 COALITION_SAMPLES = 400  # 3.5(b): random coalitions per size in the interaction test
+
+# ---- Task 4 (validating Grad-CAM: deletion / insertion and cascading randomisation) --------
+OUTPUT_DIR_T4 = ROOT / "outputs" / "task4"
+FIGURES_DIR_T4 = OUTPUT_DIR_T4 / "figures"
+
+PERTURB_STEPS = 20  # P: fraction k / P of the pixels is removed (deletion) or inserted (insertion) at step k
+PERTURB_RANDOM_ORDERS = 10
+BLUR_SIGMA = 10.0  # Gaussian blur (pixels) of the insertion start image and of the blurred deletion reference
