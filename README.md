@@ -710,9 +710,8 @@ por sí sola no explica el cambio de signo.
 
 Con la tabla de R²_w del 3.3(b) (K = 3: 0.158, K = 5: 0.227, K = 10: 0.293, K = 20: 0.301) se eligió **K = 10**, el menor K que alcanza el
 90% de la fidelidad obtenida con las 20 variables (97.6%). A partir de ahí, duplicar las variables sólo agrega
-+0.007 de R²_w y vuelve la explicación más difícil de leer; por debajo, con K = 5, se pierde
-0.066 de R²_w. La comprensibilidad favorece pocos términos (una persona puede seguir unas 5 a 7 razones), y la
-fidelidad favorece más términos sólo mientras el aumento de R²_w sea apreciable, que aquí se agota en K = 10.
++0.007 de R²_w y vuelve la explicación más difícil de leer; por debajo, con K = 5, se pierde 0.066 de R²_w y sólo queda el 75.5% de la fidelidad máxima.
+La comprensibilidad favorece pocos términos (una persona sigue con comodidad unas 5 a 7 razones) y K = 10 las supera: se acepta ese costo porque la fidelidad ya es baja y recortarla a K = 5 dejaría una explicación que describe todavía menos el comportamiento local del modelo.
 
 Para una decisión de crédito se exigiría **R²_w ≥ 0.8**: la explicación se usa para justificar un rechazo ante el cliente y el regulador,
 así que debe reproducir la mayor parte del comportamiento local del modelo; con una fidelidad menor, una razón dada podría no ser la que

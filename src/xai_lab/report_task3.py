@@ -314,13 +314,23 @@ por sí sola no explica el cambio de signo."""
     kmax = max(r2)
     chosen = next(k for k in sorted(r2) if r2[k] >= K_SHARE * r2[kmax])
     ks = sorted(r2)
+    prev = ks[ks.index(chosen) - 1] if ks.index(chosen) else None
+    below = (f" por debajo, con K = {prev}, se pierde {r2[chosen] - r2[prev]:.3f} de R²_w y sólo queda el "
+             f"{r2[prev] / r2[kmax]:.1%} de la fidelidad máxima." if prev is not None else "")
+    # comprehensibility: a person follows about 5 to 7 reasons; say explicitly when the chosen K exceeds it
+    if chosen > 7:
+        trade = (f"La comprensibilidad favorece pocos términos (una persona sigue con comodidad unas 5 a 7 razones) y K = {chosen} "
+                 f"las supera: se acepta ese costo porque la fidelidad ya es baja y recortarla{f' a K = {prev}' if prev else ''} dejaría una "
+                 f"explicación que describe todavía menos el comportamiento local del modelo.")
+    else:
+        trade = (f"K = {chosen} cabe dentro de las 5 a 7 razones que una persona sigue con comodidad, así que cumple a la vez "
+                 f"fidelidad y comprensibilidad.")
     c_txt = f"""### (c) Fidelidad y comprensibilidad
 
 Con la tabla de R²_w del 3.3(b) ({", ".join(f"K = {k}: {_f(r2[k])}" for k in ks)}) se eligió **K = {chosen}**, el menor K que alcanza el
 {K_SHARE:.0%} de la fidelidad obtenida con las 20 variables ({r2[chosen] / r2[kmax]:.1%}). A partir de ahí, duplicar las variables sólo agrega
-{_sg(r2[kmax] - r2[chosen])} de R²_w y vuelve la explicación más difícil de leer; por debajo, con K = {ks[ks.index(chosen) - 1] if ks.index(chosen) else chosen}, se pierde
-{r2[chosen] - r2[ks[ks.index(chosen) - 1]] if ks.index(chosen) else 0:.3f} de R²_w. La comprensibilidad favorece pocos términos (una persona puede seguir unas 5 a 7 razones), y la
-fidelidad favorece más términos sólo mientras el aumento de R²_w sea apreciable, que aquí se agota en K = {chosen}.
+{_sg(r2[kmax] - r2[chosen])} de R²_w y vuelve la explicación más difícil de leer;{below}
+{trade}
 
 Para una decisión de crédito se exigiría **R²_w ≥ {MIN_FIDELITY:g}**: la explicación se usa para justificar un rechazo ante el cliente y el regulador,
 así que debe reproducir la mayor parte del comportamiento local del modelo; con una fidelidad menor, una razón dada podría no ser la que
