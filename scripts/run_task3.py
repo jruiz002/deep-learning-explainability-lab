@@ -28,6 +28,8 @@ def main() -> None:
     viz_task3.fig_stability(run.results, fig / "fig_3_2_stability.png")
     viz_task3.fig_lime_vs_shap(run.results, fig / "fig_3_3_lime_vs_shap.png")
     viz_task3.fig_counterfactuals(run.results, fig / "fig_3_4_counterfactuals.png")
+    viz_task3.fig_jaccard_neff(run.results, fig / "fig_3_5a_jaccard_neff.png")
+    viz_task3.fig_disagreement(run.results, fig / "fig_3_5b_disagreement.png")
 
     report.write_json(run.results, config.OUTPUT_DIR_T3 / "results.json")
     report.update_readme_block(

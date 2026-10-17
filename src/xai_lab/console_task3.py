@@ -30,7 +30,7 @@ def collect_checks(results: dict) -> list[tuple[str, float, float, bool]]:
         ("3.2 pares por celda distintos de C(20, 2) = 190", float(max(abs(c["n_pairs"] - 190) for c in t2["cells"])), 1e-12),
     ]
     if "t3_4" in results:
-        t4 = results["t3_4"]
+        t4, t5 = results["t3_4"], results["t3_5"]
         sel = t4["selected"]
         feats = [{c["feature"] for c in s["changes"]} for s in sel]
         out += [
@@ -38,6 +38,9 @@ def collect_checks(results: dict) -> list[tuple[str, float, float, bool]]:
             ("3.4 seleccionados que cambian una variable no accionable", float(sum(len(f - set(t4["actionable"])) for f in feats)), 0.5),
             ("3.4 seleccionados con el mismo conjunto de variables", float(len(feats) - len({frozenset(f) for f in feats})), 0.5),
             ("3.4 |distancia - suma de costos por variable|", max(abs(s["distance"] - sum(c["cost"] for c in s["changes"])) for s in sel), 1e-9),
+            ("3.5(a) Jaccard de la corrida de verificación bajo 0.9", max(0.0, t5["a"]["target"] - t5["a"]["check_jaccard"]), 1e-12),
+            ("3.5(b) |promedio por tamaños - phi TreeSHAP| (log-odds)",
+             abs(t5["b"]["interaction"]["shapley_from_sizes_log_odds"] - t5["b"]["shap_phi"]), 0.05),
         ]
     return [(d, v, t, v < t) for d, v, t in out]
 
@@ -79,6 +82,19 @@ def render_console(results: dict, figures: list[str], elapsed: float) -> tuple[s
                     [[str(i), "; ".join(f"{c['feature']}: {c['original']} -> {c['new']}" for c in s["changes"]), f"{s['distance']:.3f}",
                       f"{s['p_good']:.4f}"] for i, s in enumerate(t4["selected"], 1)], "rlrr")
         L += ["", f" Proximidad promedio {t4['proximity_selected']:.3f}; dispersión promedio {t4['sparsity_selected']:.1f} variables"]
+        t5 = results["t3_5"]
+        L += _title("Task 3.5  Análisis")
+        a5, b5 = t5["a"], t5["b"]
+        L += ["", f" (a) N para Jaccard {a5['target']} con sigma_rel = {a5['sigma_rel']}: N = {a5['n_estimate']} "
+                  f"(1 - J = a N_ef^-{a5['fit_b']:.2f}); verificación: J = {a5['check_jaccard']:.4f}, N_ef = {a5['check_n_eff']:.0f}",
+              f" (b) mayor desacuerdo: cliente {b5['client']}, {b5['feature']} (puesto LIME {b5['rank_lime']}, SHAP {b5['rank_shap']}); "
+              f"w = {b5['lime_w']:+.4f}, phi = {b5['shap_phi']:+.4f}",
+              f"     efecto por tamaño (log-odds): {b5['interaction']['effect_log_odds'][0]:+.3f} (0 presentes) -> "
+              f"{b5['interaction']['effect_log_odds'][-1]:+.3f} (19 presentes); promedio = {b5['interaction']['shapley_from_sizes_log_odds']:+.4f}"]
+        L += ["", " (d) Top-3 |phi| del cliente rechazado frente a los contrafactuales:"]
+        L += _table(["Variable", "phi", "Tipo", "En CF", "Mejor P(good) cambiándola sola"],
+                    [[r["feature"], f"{r['phi']:+.3f}", r["role"], "sí" if r["in_counterfactuals"] else "no", f"{r['best_single_p']:.3f}"]
+                     for r in t5["d"]["top3_shap"]], "lrllr")
 
     checks = collect_checks(results)
     L += _title("Verificaciones numéricas")

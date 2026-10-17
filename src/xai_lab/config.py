@@ -86,3 +86,9 @@ CF_THRESHOLD = 0.5  # valid when P(good) >= theta
 CF_N_SELECTED = 3
 CF_IMMUTABLE = ("age", "personal_status", "foreign_worker")
 CF_ACTIONABLE = ("duration", "credit_amount", "installment_commitment", "checking_status", "savings_status")
+
+# 3.5 analysis
+LIME_TARGET_JACCARD = 0.9  # 3.5(a): N needed for this mean Jaccard at sigma_rel = 0.75
+LIME_DISAGREE_SIGMA_REL = (0.25, 0.5, 0.75, 1.5, 3.0)  # 3.5(b): kernel widths of the locality test
+LIME_DISAGREE_SEEDS = 10  # runs per kernel width in the locality test
+COALITION_SAMPLES = 400  # 3.5(b): random coalitions per size in the interaction test

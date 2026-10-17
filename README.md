@@ -507,7 +507,7 @@ Fijamos los detalles que cambian los números en lugar de pedir simplemente "cal
   con z'_j = 0 se toma un valor al azar de la columna j del conjunto de entrenamiento. Peso π = exp(−D²/σ²), con D² igual al número de variables ausentes.
 - Ajuste: regresión ridge ponderada en forma cerrada con `np.linalg.solve`; el intercepto **no se penaliza**. Se ajustan las 20 variables, se
   conservan las K de mayor |w| y se reajusta sólo con ellas; R²_w se calcula sobre ese reajuste con las mismas muestras y pesos.
-- Versiones: scikit-learn 1.9.0, NumPy 2.5.2, pandas 3.0.5, Python 3.14.7.
+- Versiones: scikit-learn 1.9.1, NumPy 2.5.2, pandas 3.0.6, Python 3.12.13.
 
 ## Task 3.1 - LIME desde cero
 
@@ -526,7 +526,7 @@ Fijamos los detalles que cambian los números en lugar de pedir simplemente "cal
 
 | Variable | Valor del cliente | Coeficiente |
 |---|---|---|
-| `savings_status` | no known savings | +0.141 |
+| `savings_status` | no known savings | +0.142 |
 | `other_payment_plans` | bank | -0.132 |
 | `checking_status` | 0<=X<200 | -0.112 |
 | `duration` | 36 | -0.106 |
@@ -548,7 +548,7 @@ Fijamos los detalles que cambian los números en lugar de pedir simplemente "cal
 
 *Figura 14. Coeficientes LIME (top-5) de los tres clientes; R²_w del reajuste en el título de cada panel.*
 
-En el cliente rechazado (p = 0.087), `other_payment_plans`, `checking_status`, `duration` y `age` tienen coeficiente negativo, es decir, conservar su valor en lugar de sustituirlo por uno de entrenamiento baja P(good) en la aproximación local; el de mayor magnitud es `other_payment_plans` = bank (-0.132). En sentido contrario, `savings_status` = no known savings (+0.141) tiene coeficiente positivo. R²_w va de 0.172 (cliente aprobado) a 0.279 (cliente dudoso): en los tres clientes el modelo lineal con 5 variables explica menos de la mitad de la varianza ponderada de P(good), de modo que los coeficientes describen sólo una parte del comportamiento local del modelo. Variables presentes en el top-5 de dos clientes: aprobado y rechazado: `checking_status`, `duration` y `savings_status`; aprobado y dudoso: `checking_status`, `credit_amount` y `duration`; rechazado y dudoso: `age`, `checking_status` y `duration`.
+En el cliente rechazado (p = 0.087), `other_payment_plans`, `checking_status`, `duration` y `age` tienen coeficiente negativo, es decir, conservar su valor en lugar de sustituirlo por uno de entrenamiento baja P(good) en la aproximación local; el de mayor magnitud es `other_payment_plans` = bank (-0.132). En sentido contrario, `savings_status` = no known savings (+0.142) tiene coeficiente positivo. R²_w va de 0.172 (cliente aprobado) a 0.279 (cliente dudoso): en los tres clientes el modelo lineal con 5 variables explica menos de la mitad de la varianza ponderada de P(good), de modo que los coeficientes describen sólo una parte del comportamiento local del modelo. Variables presentes en el top-5 de dos clientes: aprobado y rechazado: `checking_status`, `duration` y `savings_status`; aprobado y dudoso: `checking_status`, `credit_amount` y `duration`; rechazado y dudoso: `age`, `checking_status` y `duration`.
 
 ## Task 3.2 - Estabilidad
 
@@ -577,12 +577,175 @@ Cliente rechazado (posición 1); para cada combinación de N y σ_rel se corrier
 
 El Jaccard medio crece con N en las tres anchuras (por ejemplo, con σ_rel = 0.75 pasa de 0.699 con N = 500 a 0.937 con N = 5000); con N fijo no disminuye al aumentar σ_rel; el valor más alto es 0.937 (N = 5000, σ_rel = 1.5) y el más bajo 0.698 (N = 500, σ_rel = 0.5). N_ef equivale a una fracción de N que casi no cambia con N (variación máxima de 0.4% de N dentro de cada σ_rel); promedia 81.8% de N con σ_rel = 0.5, 96.1% con 0.75 y 99.8% con 1.5, de modo que un kernel más ancho reparte el peso entre más muestras.
 
+## Task 3.3 - Comparación de LIME con SHAP
+
+### (a) Ranking y coincidencia de variables
+
+Spearman entre |w| de LIME (primer ajuste, 20 variables, misma semilla que en 3.1) y |φ| de TreeSHAP interventional del Task 2.2
+(mismo modelo y mismo fondo de 100 filas), y coincidencia entre las tres variables principales de cada método. Como LIME explica P(good)
+y SHAP el log-odds, se agrega como control la correlación con |φ| calculado por TreeSHAP sobre la probabilidad.
+
+| Cliente | p(good) | Spearman \|w\| vs \|φ\| | Spearman vs \|φ\| (probabilidad) | Top-3 LIME | Top-3 SHAP | Coincidencia |
+|---|---|---|---|---|---|---|
+| aprobado | 0.866 | 0.723 | 0.851 | `savings_status`, `credit_amount` y `checking_status` | `savings_status`, `checking_status` y `credit_amount` | 3/3 |
+| rechazado | 0.087 | 0.952 | 0.952 | `savings_status`, `other_payment_plans` y `checking_status` | `duration`, `savings_status` y `other_payment_plans` | 2/3 |
+| dudoso | 0.504 | 0.869 | 0.853 | `checking_status`, `duration` y `credit_amount` | `checking_status`, `duration` y `credit_amount` | 3/3 |
+
+La correlación va de 0.723 (cliente aprobado) a 0.952 (cliente rechazado): ambos métodos ordenan las variables de forma parecida.
+El top-3 coincide por completo en aprobado y dudoso. Difiere en rechazado (2/3: LIME pone `checking_status` y SHAP `duration`).
+
+### (b) Fidelidad según el número de variables (cliente rechazado)
+
+| K | R²_w | Variables añadidas respecto del K anterior |
+|---|---|---|
+| 3 | 0.158 | `savings_status`, `other_payment_plans` y `checking_status` |
+| 5 | 0.227 | `duration` y `age` |
+| 10 | 0.293 | `residence_since`, `purpose`, `credit_history`, `credit_amount` y `property_magnitude` |
+| 20 | 0.301 | `installment_commitment`, `employment`, `personal_status`, `job`, `foreign_worker`, `housing`, `other_parties`, `own_telephone`, `num_dependents` y `existing_credits` |
+
+![Figura 16. |w| de LIME contra |φ| de TreeSHAP por cliente y R²_w del cliente rechazado según K.](outputs/task3/figures/fig_3_3_lime_vs_shap.png)
+
+*Figura 16. |w| de LIME contra |φ| de TreeSHAP por cliente y R²_w del cliente rechazado según K.*
+
+R²_w crece con K (+0.068 de K = 3 a 5; +0.066 de K = 5 a 10; +0.007 de K = 10 a 20), pero incluso con las 20 variables el modelo lineal en z' explica sólo 30.1% de la varianza
+ponderada de P(good). El límite no lo pone K sino la forma del modelo sustituto: un modelo aditivo en presencia/ausencia no puede
+representar las interacciones del modelo de árboles (ver 3.5(b)).
+
+## Task 3.4 - Explicaciones contrafactuales
+
+Cliente rechazado (posición 1, P(good) = 0.087). Se generaron 20,000 candidatos; cada uno
+cambia un número uniforme de 1 a 3 variables accionables (`duration`, `credit_amount`, `installment_commitment`, `checking_status` y `savings_status`) elegidas al azar, con valores tomados
+al azar de los valores observados en el entrenamiento distintos del original (con su frecuencia). Las inmutables (`age`, `personal_status` y `foreign_worker`)
+y el resto de variables no se modifican. Un candidato es válido si P(good) ≥ θ = 0.5. Escalas de la distancia: `duration` = 6 (MAD), `credit_amount` = 1057.5 (MAD), `installment_commitment` = 1 (MAD);
+las categóricas cuentan 1 si cambian.
+
+| # | Variables modificadas | Original → nuevo | Distancia | P(good) |
+|---|---|---|---|---|
+| 1 | `checking_status`, `duration` y `credit_amount` | 0<=X<200 → no checking; 36 → 30; 3990 → 3780 | 2.199 | 0.530 |
+| 2 | `duration`, `credit_amount` y `installment_commitment` | 36 → 30; 3990 → 3594; 3 → 1 | 3.374 | 0.555 |
+| 3 | `checking_status`, `duration` y `installment_commitment` | 0<=X<200 → no checking; 36 → 30; 3 → 1 | 4.000 | 0.519 |
+
+![Figura 17. P(good) del cliente rechazado y de los tres contrafactuales seleccionados (línea: umbral θ).](outputs/task3/figures/fig_3_4_counterfactuals.png)
+
+*Figura 17. P(good) del cliente rechazado y de los tres contrafactuales seleccionados (línea: umbral θ).*
+
+| Métrica | Valor |
+|---|---|
+| Validez (candidatos válidos / total) | **0.075%** (15 de 20,000) |
+| Proximidad promedio (3 seleccionados) | **3.191** (todos los válidos: 6.050) |
+| Dispersión: variables cambiadas en promedio (3 seleccionados) | **3.0** (todos los válidos: 3.0) |
+| Máximo P(good) entre todos los candidatos | 0.619 |
+
+Válidos según el número de variables cambiadas: 1 variable: 0 de 6,729; 2 variables: 0 de 6,648; 3 variables: 15 de 6,623. Hubo candidatos válidos con el máximo de 3 variables, por lo que no fue necesario subirlo a 5. Ningún cambio de una o dos variables basta para pasar el umbral, de modo que
+el rechazo no depende de una sola variable accionable.
+
+## Task 3.5 - Análisis
+
+### (a) Relación entre estabilidad y tamaño efectivo
+
+En las nueve celdas del Task 3.2 el Jaccard medio aumenta con N_ef (Spearman = 0.996, p = 1.5e-08):
+la estabilidad depende de cuántas muestras pesan de verdad en el ajuste, más que de N o de σ_rel por separado. Para σ_rel = 0.75, N_ef es
+96.1% de N, así que N_ef y N son casi proporcionales.
+
+**Estimación.** El error de los coeficientes de la regresión ponderada disminuye como 1/√N_ef, y el top-5 cambia cuando ese error intercambia
+la variable K-ésima con la siguiente; por eso se modeló 1 − J = a·N_ef^(−b) y se ajustó con los dos puntos de la tabla que encierran el objetivo
+(N = 2000 y N = 5000), es decir, una interpolación en escala log-log y no una extrapolación fuera del rango medido. Resultado:
+b = 1.33, N_ef necesario = 3398 y **N ≈ 3600** (N_ef / 0.961, redondeado hacia arriba a un múltiplo de 100).
+
+**Verificación.** Una corrida adicional con N = 3600, σ_rel = 0.75 y las mismas 20 semillas dio un Jaccard medio de
+**0.907** (N_ef = 3460), que alcanza el objetivo de 0.9.
+La estimación se confirma. El valor tiene su propio ruido: con 20 corridas el Jaccard medio
+de una celda varía de una ejecución a otra, por lo que la cifra debe leerse como orden de magnitud (unas 3600 muestras) y no como un umbral exacto.
+
+![Figura 18. Jaccard medio contra N_ef en las nueve celdas del 3.2, curva ajustada y corrida de verificación.](outputs/task3/figures/fig_3_5a_jaccard_neff.png)
+
+*Figura 18. Jaccard medio contra N_ef en las nueve celdas del 3.2, curva ajustada y corrida de verificación.*
+
+### (b) Desacuerdo entre LIME y SHAP
+
+Se buscó la mayor diferencia de puesto entre el ranking de |w| (LIME) y el de |φ| (SHAP) en los tres clientes: **cliente aprobado,
+variable `duration`** (puesto 5 en LIME y 14 en SHAP). Además, los signos son opuestos: w = +0.0333
+(P(good)) y φ = -0.0549 (log-odds).
+
+**Hipótesis:** el efecto de `duration` = 18 depende de los valores de las demás variables (interacción). SHAP promedia su
+contribución sobre coaliciones de todos los tamaños con el mismo peso, mientras que LIME concentra sus muestras en coaliciones con la mitad de las
+variables presentes y explica la probabilidad, no el log-odds. Se probaron las tres explicaciones posibles:
+
+1. **Localidad.** Con σ_rel ∈ {0.25, 0.5, 0.75, 1.5, 3} y 10 semillas por valor, el coeficiente medio de LIME fue
+   +0.0193, +0.0242, +0.0224, +0.0214, +0.0211 (positivo en 50 de 50 corridas) y su puesto medio
+   6.9, 7.9, 8.2, 8.3, 8.3. Reducir el kernel **no** acerca LIME a SHAP: el signo no cambia, de modo que la
+   discrepancia no se debe a la localidad.
+2. **Relación no lineal.** Al variar sólo `duration` en el cliente (panel izquierdo de la figura siguiente), P(good) es una función escalonada y
+   no monótona, que va de 0.950 a 0.451. Con su valor actual (18) P(good) = 0.866,
+   por encima del promedio al sustituirlo por los valores de entrenamiento (0.821); 44.9% de esos valores dan una
+   probabilidad menor. La no linealidad existe, pero con las demás variables del cliente fijas el valor actual favorece la aprobación, lo
+   que coincide con el signo de LIME y no con el de SHAP.
+3. **Interacción.** Se midió el efecto medio de conservar `duration` = 18 según cuántas de las otras 19 variables conservan
+   el valor del cliente (400 coaliciones por tamaño, el resto tomado del fondo de SHAP). En log-odds el efecto pasa de
+   -0.253 (ninguna otra variable del cliente) a +0.188 (las 19) y cambia de signo a partir de 13 variables.
+   El promedio uniforme sobre los tamaños, que es lo que hace Shapley, da -0.0546, prácticamente igual a
+   φ = -0.0549, lo que valida la prueba. En los tamaños donde se concentra el muestreo de LIME (8 a 11 variables) el efecto en
+   log-odds es -0.080, -0.068, -0.024, -0.020, y en probabilidad el promedio sobre tamaños es +0.0066.
+   Con TreeSHAP sobre la probabilidad, φ = +0.0119 (puesto 10), del mismo signo que LIME.
+
+![Figura 19. Cliente aprobado, variable duration: P(good) al variar sólo esa variable, efecto según el número de variables del cliente presentes y coeficiente de LIME según σ_rel.](outputs/task3/figures/fig_3_5b_disagreement.png)
+
+*Figura 19. Cliente aprobado, variable duration: P(good) al variar sólo esa variable, efecto según el número de variables del cliente presentes y coeficiente de LIME según σ_rel.*
+
+**Conclusión:** la discrepancia se debe a una **interacción**: el efecto de `duration` cambia de signo según el contexto, y cada método
+promedia contextos distintos (SHAP pondera por igual las coaliciones pequeñas, donde el efecto es negativo). La escala de salida la acentúa,
+porque la misma interacción promediada en probabilidad da un φ positivo. No se debe a la localidad, y la no linealidad de `duration`
+por sí sola no explica el cambio de signo.
+
+### (c) Fidelidad y comprensibilidad
+
+Con la tabla de R²_w del 3.3(b) (K = 3: 0.158, K = 5: 0.227, K = 10: 0.293, K = 20: 0.301) se eligió **K = 10**, el menor K que alcanza el
+90% de la fidelidad obtenida con las 20 variables (97.6%). A partir de ahí, duplicar las variables sólo agrega
++0.007 de R²_w y vuelve la explicación más difícil de leer; por debajo, con K = 5, se pierde
+0.066 de R²_w. La comprensibilidad favorece pocos términos (una persona puede seguir unas 5 a 7 razones), y la
+fidelidad favorece más términos sólo mientras el aumento de R²_w sea apreciable, que aquí se agota en K = 10.
+
+Para una decisión de crédito se exigiría **R²_w ≥ 0.8**: la explicación se usa para justificar un rechazo ante el cliente y el regulador,
+así que debe reproducir la mayor parte del comportamiento local del modelo; con una fidelidad menor, una razón dada podría no ser la que
+realmente movió la decisión. **Ningún K la alcanza** (el máximo es 0.301). En ese caso no se entregaría la explicación de LIME como justificación.
+Se usaría SHAP, cuya eficiencia se cumple con error de 1e-7 (Task 2.2), o el contrafactual del 3.4, cuya P(good) la calcula el propio modelo.
+Para LIME, se podría intentar un sustituto que incluya interacciones (3.5(b) muestra que son la causa de la baja fidelidad) y reportar siempre R²_w junto a los coeficientes.
+
+### (d) SHAP frente a contrafactuales
+
+| Variable (top-3 \|φ\|) | Valor | φ | Tipo | ¿En contrafactuales? | Mejor cambio único | P(good) con ese cambio | Costo |
+|---|---|---|---|---|---|---|---|
+| `duration` | 36 | -0.926 | accionable | sí | 27 | 0.293 | 1.50 |
+| `savings_status` | no known savings | +0.877 | accionable | no | >=1000 | 0.093 | 1.00 |
+| `other_payment_plans` | bank | -0.806 | no accionable | no | none | 0.210 | 1.00 |
+
+Los contrafactuales cambian `checking_status`, `credit_amount`, `duration` y `installment_commitment`. Del top-3 de |φ| sólo aparece `duration`.
+`savings_status` (φ = +0.877) es accionable, pero su φ es positivo: su valor actual ya empuja hacia la aprobación; cambiarla nunca ayuda lo suficiente: el mejor valor (>=1000) da P(good) = 0.093 (el promedio de sus valores, 0.044), y de 7,921 candidatos que la cambian, 0 son válidos. Su efecto por cambio es pequeño o contrario. `other_payment_plans` (φ = -0.806) no es accionable en este ejercicio, así que la búsqueda nunca la modifica. Aunque se pudiera, el mejor valor (none) sólo lleva P(good) de 0.087 a 0.210 con costo 1, lejos de θ = 0.5. A la vez, los contrafactuales usan variables con |φ| bajo en este cliente (`checking_status`, `credit_amount` y `installment_commitment`) porque son baratas en la distancia y su
+combinación cruza el umbral.
+
+SHAP responde **"¿cuánto aportó cada variable a llevar el puntaje desde el promedio del fondo hasta el de este cliente?"**: reparte la
+diferencia f(x) − φ0 entre las variables, sean o no modificables. El contrafactual responde **"¿qué cambio mínimo y factible haría que el
+modelo aprobara la solicitud?"**: busca la frontera de decisión más cercana respetando las restricciones de accionabilidad. Una variable puede
+ser la principal razón del puntaje y no aparecer en ningún contrafactual, si es inmutable o si cambiarla no alcanza el umbral.
+
 **Prompt utilizado**
 
-Pendiente
+*3.1 y 3.2:* Pendiente (lo completa quien implementó esos incisos).
+
+*3.3 a 3.5:* Con el enunciado del Laboratorio 10 y el repositorio, que ya tiene implementados los Tasks 1, 2, 3.1 y 3.2, implementa lo que falta del
+Task 3 siguiendo la misma estructura (`task3.py` para los cálculos, `viz_task3.py`, `console_task3.py` y `report_task3.py`). En 3.3 compara |w| del
+primer ajuste de LIME (20 variables, misma semilla) con |φ| de TreeSHAP interventional del Task 2.2 y calcula R²_w con K ∈ {3, 5, 10, 20} sobre las
+mismas muestras. En 3.4 escribe la búsqueda de contrafactuales con NumPy: 20 000 candidatos que cambian de 1 a 3 variables accionables con
+valores observados en el entrenamiento, distancia con MAD (o desviación absoluta media si la MAD es 0) y selección codiciosa de tres con
+conjuntos de variables distintos. En 3.5 no escribas conclusiones sin datos: estima el N para un Jaccard de 0.9 a partir de la tabla del 3.2
+y verifícalo con una corrida nueva, y prueba la causa del mayor desacuerdo LIME-SHAP con experimentos (ancho del kernel, P(good) al variar
+una sola variable y efecto según el tamaño de la coalición). Agrega verificaciones numéricas con tolerancia a la consola.
 
 **Por qué funcionó este prompt**
 
-Pendiente
+Dar el enunciado completo y pedir que se siguiera la estructura existente fijó las fórmulas, los parámetros y los nombres, y permitió
+reutilizar el modelo, los clientes y el LIME del 3.1 sin reimplementarlos. Pedir que cada conclusión del 3.5 saliera de un experimento evitó
+respuestas genéricas: la prueba de interacción se validó a sí misma porque su promedio sobre tamaños reproduce el φ de TreeSHAP, y la
+estimación de N se comprobó con una corrida que no se usó para ajustarla.
 
 <!-- INFORME_TASK3:FIN -->
