@@ -8,10 +8,11 @@
 - José Auyón 
 - Gerardo Fernández 
 
-En este task se implementó Grad-CAM desde cero sobre un ResNet-18 preentrenado en ImageNet, se calculó CAM directamente
-desde los pesos de la capa final y se verificó numéricamente que ambos métodos coinciden. Después se usaron los mapas para
-analizar tres imágenes. Todo el código usa PyTorch, NumPy, SciPy y Matplotlib; no se usó `pytorch-grad-cam`, `captum`
-ni librerías similares.
+Se explican las decisiones de dos modelos. En visión se implementó Grad-CAM desde cero sobre un ResNet-18 preentrenado en
+ImageNet, se verificó numéricamente su igualdad con CAM (Task 1) y se validaron los mapas con deletion/insertion y con la prueba de
+aleatorización de parámetros en cascada (Task 4). En datos tabulares (German Credit) se calcularon valores SHAP y una fórmula de Shapley
+exacta propia (Task 2), se implementó LIME desde cero, se comparó con SHAP y se construyeron explicaciones contrafactuales (Task 3).
+No se usó `pytorch-grad-cam`, `captum` ni `lime`; `shap` sólo se usó donde el enunciado lo permite (Task 2 y la comparación del 3.3).
 
 ## Cómo levantar y correr el proyecto
 
@@ -24,10 +25,11 @@ source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 pip install -e .                   # hace importable el paquete xai_lab
 
-python -m pytest -q                # pruebas unitarias (32)
+python -m pytest -q                # pruebas unitarias (45)
 python scripts/run_task1.py        # corre todo el Task 1
 python scripts/run_task2.py        # corre todo el Task 2 (SHAP sobre German Credit)
-python scripts/run_task3.py        # corre todo el Task 3 (LIME desde cero)
+python scripts/run_task3.py        # corre todo el Task 3 (LIME, comparación con SHAP y contrafactuales)
+python scripts/run_task4.py        # corre todo el Task 4 (validación de Grad-CAM); usa los resultados de los Tasks 2 y 3
 ```
 
 Al correrlo, la consola imprime un reporte de ejecución con una sección por inciso (`Task 1.1`, `1.2`, `1.3`,
@@ -38,10 +40,12 @@ El Task 2 se corre igual (`scripts/run_task2.py`; descarga German Credit de Open
 su propio reporte con verificaciones numéricas, guarda las figuras en `outputs/task2/figures/` y los números en
 `outputs/task2/results.json`, y reescribe su sección del informe (entre `INFORME_TASK2:INICIO` y `INFORME_TASK2:FIN`, debajo del
 informe del Task 1).
-El Task 3 (`scripts/run_task3.py`, unos 2 s; reutiliza el modelo y los clientes del Task 2) imprime su reporte con verificaciones numéricas,
+El Task 3 (`scripts/run_task3.py`, unos 4 s; reutiliza el modelo y los clientes del Task 2) imprime su reporte con verificaciones numéricas,
 guarda las figuras en `outputs/task3/figures/` y los números en `outputs/task3/results.json`, y reescribe su sección del informe (entre
-`INFORME_TASK3:INICIO` y `INFORME_TASK3:FIN`, debajo del informe del Task 2). (`make setup`, `make test`, `make task1`, `make task2` y
-`make task3` hacen lo mismo.)
+`INFORME_TASK3:INICIO` y `INFORME_TASK3:FIN`, debajo del informe del Task 2).
+El Task 4 (`scripts/run_task4.py`, unos 20 s en CPU) hace lo mismo en `outputs/task4/` y en su sección del informe (`INFORME_TASK4`); como el
+inciso 4.3(c) cita números de los Tasks 2 y 3, hay que correrlos antes. (`make setup`, `make test`, `make task1` a `make task4` y `make all`
+hacen lo mismo.)
 
 Estructura del código:
 
@@ -59,14 +63,19 @@ src/xai_lab/
   task2.py           los experimentos de 2.1 a 2.6
   viz_tabular.py, console_task2.py, report_task2.py   figuras, reporte de consola e informe del Task 2
   lime_tabular.py    LIME tabular con NumPy: muestreo, kernel, ridge ponderada en forma cerrada, R²_w y N_ef (Task 3)
-  task3.py           los experimentos 3.1 y 3.2
+  counterfactual.py  contrafactuales por muestreo: distancia con MAD, candidatos y selección diversa (3.4)
+  task3.py           los experimentos de 3.1 a 3.5
   viz_task3.py, console_task3.py, report_task3.py   figuras, reporte de consola e informe del Task 3
-scripts/run_task1.py, scripts/run_task2.py, scripts/run_task3.py   puntos de entrada
+  faithfulness.py    deletion / insertion: orden por el mapa, gris, desenfoque gaussiano y AUC (4.1)
+  sanity.py          reinicialización por bloques y Spearman entre mapas (4.2)
+  task4.py           los experimentos de 4.1 a 4.3
+  viz_task4.py, console_task4.py, report_task4.py   figuras, reporte de consola e informe del Task 4
+scripts/run_task1.py ... scripts/run_task4.py   puntos de entrada
 tests/               pruebas de las identidades matemáticas, geometría y hooks
 ```
 
-> La sección **Informe** de abajo la genera automáticamente `python scripts/run_task1.py` con los datos de la
-> ejecución (tablas, errores, probabilidades y figuras); por eso no se edita a mano, ya que cada corrida la reescribe.
+> Las secciones del **Informe** de abajo las generan automáticamente `scripts/run_task1.py` a `scripts/run_task4.py` con los datos de
+> cada ejecución (tablas, errores, probabilidades y figuras); por eso no se editan a mano, ya que cada corrida las reescribe.
 
 ---
 
