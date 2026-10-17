@@ -164,6 +164,9 @@ def _t3_4(d: credit.CreditData, sp: credit.Split, model, pos: int, seed: int) ->
                        config.CF_THRESHOLD, seed)
     elapsed = time.perf_counter() - t0
     chosen = cf.select_diverse(cs, config.CF_N_SELECTED)
+    if len(chosen) < config.CF_N_SELECTED:  # the report, the checks and Task 4 assume all of them exist
+        raise RuntimeError(f"Sólo {len(chosen)} contrafactuales válidos con conjuntos de variables distintos "
+                           f"(se piden {config.CF_N_SELECTED}; máximo de cambios = {cs.max_changes}).")
     scale = cf.robust_scale(X_train, num)
     n_changed = cs.changed.sum(axis=1)
     sel = []
@@ -215,6 +218,10 @@ def _t3_5a(t2: dict, x, predict, X_train, names) -> dict:
     E = np.array([row[col] for row in t2["n_eff"]])
     hi = int(np.argmax(J >= target)) if (J >= target).any() else len(J) - 1
     lo = max(hi - 1, 0)
+    # the power law needs two different points with 0 < 1 - J and J increasing; otherwise b is NaN or meaningless
+    if hi == lo or J[hi] >= 1 or J[hi] <= J[lo]:
+        raise ValueError(f"No se puede ajustar 1 - J = a·N_ef^(-b): Jaccard {np.round(J, 4).tolist()} con N = "
+                         f"{ns.astype(int).tolist()} (el menor N ya alcanza {target}, o J no crece). Agregue un N menor a la tabla del 3.2.")
     b = float(np.log((1 - J[lo]) / (1 - J[hi])) / np.log(E[hi] / E[lo]))
     a = float((1 - J[hi]) * E[hi] ** b)
     n_eff_needed = float((a / (1 - target)) ** (1 / b))

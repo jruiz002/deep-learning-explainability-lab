@@ -31,7 +31,7 @@ def _load_prior() -> dict:
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--seed", type=int, default=config.SEED)
-    ap.add_argument("--device", default="cpu")
+    ap.add_argument("--device", default="cpu", choices=["cpu"])  # ponytail: tensors and .numpy() calls assume CPU
     args = ap.parse_args()
     t0 = time.perf_counter()
     sys.stdout.reconfigure(encoding="utf-8")

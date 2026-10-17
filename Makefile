@@ -1,6 +1,8 @@
 PY = .venv/bin/python
 
 .PHONY: setup test task1 task2 task3 task4 all images clean
+# task4 reads the results of task2/task3 and every task rewrites its block of README.md: never run them in parallel
+.NOTPARALLEL:
 
 setup:
 	python3.11 -m venv .venv
