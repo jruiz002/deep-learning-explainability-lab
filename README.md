@@ -749,3 +749,165 @@ respuestas genéricas: la prueba de interacción se validó a sí misma porque s
 estimación de N se comprobó con una corrida que no se usó para ajustarla.
 
 <!-- INFORME_TASK3:FIN -->
+
+<!-- INFORME_TASK4:INICIO (generado por scripts/run_task4.py; no editar a mano) -->
+
+# Task 4
+
+## Configuración
+
+- Modelo y entrada: ResNet-18 (`IMAGENET1K_V1`) y las mismas tres imágenes del Task 1; clase de mayor probabilidad de cada imagen.
+- Mapa: Grad-CAM del Task 1.2 (224×224, normalizado). Los píxeles se ordenan de mayor a menor valor del mapa; los empates (celdas con valor 0)
+  conservan el orden de barrido.
+- Deletion y insertion: P = 20 pasos, 10 órdenes aleatorios (semillas 42 a 51); gris medio = 0.5 (RGB 128);
+  desenfoque gaussiano con σ = 10 píxeles por canal. Las imágenes se construyen en [0, 1] y se normalizan con la media y la desviación de ImageNet
+  justo antes del modelo. AUC = (1/P) Σ_(k=1..P) c_k.
+- Cascada: `reset_parameters` de PyTorch sobre cada Conv2d, Linear y BatchNorm2d de la capa (en BatchNorm también reinicia las estadísticas),
+  acumulando `fc`, `layer4`, `layer3`, `layer2`, `layer1`, `conv1`; semilla 42. Mapa de 7×7 (Grad-CAM con ReLU, sin interpolar) de la clase original.
+- Semilla aleatoria: **42**. Versiones: torch 2.14.1+cpu, torchvision 0.29.1+cpu, Python 3.12.13.
+
+## Task 4.1 - Deletion e insertion
+
+**Imagen (a)**, clase `golden retriever` (p = 0.9948; con la imagen toda en gris p = 0.0004; desenfocada p = 0.0048):
+
+| Métrica | Grad-CAM | Azar (media ± desv., 10 órdenes) | Diferencia | Desviaciones a favor del mapa |
+|---|---|---|---|---|
+| AUC_del (menor es mejor) | 0.3346 | 0.1308 ± 0.0181 | +0.2038 | -11.3 |
+| AUC_ins (mayor es mejor) | 0.8053 | 0.2828 ± 0.0193 | +0.5225 | +27.1 |
+
+
+**Imagen (b)**, clase `Chihuahua` (p = 0.4449; con la imagen toda en gris p = 0.0003; desenfocada p = 0.0001):
+
+| Métrica | Grad-CAM | Azar (media ± desv., 10 órdenes) | Diferencia | Desviaciones a favor del mapa |
+|---|---|---|---|---|
+| AUC_del (menor es mejor) | 0.0016 | 0.0025 ± 0.0018 | -0.0009 | +0.5 |
+| AUC_ins (mayor es mejor) | 0.7579 | 0.0754 ± 0.0153 | +0.6825 | +44.7 |
+
+
+**Imagen (c)**, clase `trimaran` (p = 0.2054; con la imagen toda en gris p = 0.0012; desenfocada p = 0.0009):
+
+| Métrica | Grad-CAM | Azar (media ± desv., 10 órdenes) | Diferencia | Desviaciones a favor del mapa |
+|---|---|---|---|---|
+| AUC_del (menor es mejor) | 0.0074 | 0.0014 ± 0.0014 | +0.0060 | -4.3 |
+| AUC_ins (mayor es mejor) | 0.0984 | 0.0145 ± 0.0008 | +0.0839 | +106.6 |
+
+
+![Figura 20. Curvas de deletion (gris) e insertion (desde la imagen desenfocada) con el orden de Grad-CAM y con 10 órdenes aleatorios (media ± desviación).](outputs/task4/figures/fig_4_1_curves.png)
+
+*Figura 20. Curvas de deletion (gris) e insertion (desde la imagen desenfocada) con el orden de Grad-CAM y con 10 órdenes aleatorios (media ± desviación).*
+
+![Figura 21. Imagen (a): pasos de deletion e insertion con el orden de Grad-CAM y con un orden aleatorio.](outputs/task4/figures/fig_4_1_frames.png)
+
+*Figura 21. Imagen (a): pasos de deletion e insertion con el orden de Grad-CAM y con un orden aleatorio.*
+
+## Task 4.2 - Aleatorización de parámetros en cascada
+
+Spearman entre el mapa de 7×7 original y el de cada etapa (entre paréntesis, el mismo cálculo sobre el mapa antes de ReLU, que no tiene empates en cero):
+
+| Etapa | Capas reinicializadas | (a) golden retriever | (b) Chihuahua | (c) trimaran |
+|---|---|---|---|---|
+| 1 | `fc` | +0.389 (+0.390) | -0.214 (-0.442) | +0.448 (+0.237) |
+| 2 | `fc`, `layer4` | -0.151 (-0.152) | -0.483 (-0.132) | -0.306 (-0.452) |
+| 3 | `fc`, `layer4`, `layer3` | +0.233 (+0.233) | -0.242 (-0.199) | -0.018 (+0.043) |
+| 4 | `fc`, `layer4`, `layer3`, `layer2` | -0.012 (-0.127) | -0.128 (-0.193) | -0.032 (-0.029) |
+| 5 | `fc`, `layer4`, `layer3`, `layer2`, `layer1` | -0.104 (-0.088) | -0.294 (-0.027) | -0.049 (+0.024) |
+| 6 | `fc`, `layer4`, `layer3`, `layer2`, `layer1`, `conv1` | +0.157 (+0.223) | -0.233 (+0.032) | -0.232 (-0.229) |
+
+![Figura 22. Mapas de 7×7 de la clase original en cada etapa de la cascada (cada mapa escalado a su máximo) y su Spearman con el original.](outputs/task4/figures/fig_4_2_cascade_maps.png)
+
+*Figura 22. Mapas de 7×7 de la clase original en cada etapa de la cascada (cada mapa escalado a su máximo) y su Spearman con el original.*
+
+![Figura 23. Spearman con el mapa original en cada etapa de la cascada.](outputs/task4/figures/fig_4_2_cascade_spearman.png)
+
+*Figura 23. Spearman con el mapa original en cada etapa de la cascada.*
+
+## Task 4.3 - Análisis
+
+### (a) Validación contra el azar
+
+Con el criterio de 2 desviaciones estándar: en **insertion** Grad-CAM supera al azar en las tres imágenes
+((a) 27.1, (b) 44.7, (c) 106.6 desviaciones estándar). En **deletion** con gris
+no se distingue del azar en (b) (+0.5); queda **por debajo** del azar en (a) (-11.3) y (c) (-4.3).
+
+**Forma de las curvas.** El mapa de 224×224 es la interpolación bilineal de un mapa de 7×7, así que tiene sólo 49 grados de libertad: cada
+paso cambia 2509 píxeles (unas 2.5 celdas de 32×32) y el orden de Grad-CAM recorre bloques contiguos celda por celda.
+En (a), el primer paso con el orden del mapa toca 4 de las 49 celdas, mientras que un orden aleatorio toca las 49 desde el primer paso. Por eso la
+curva del mapa tiene mesetas y saltos: la probabilidad se mantiene por encima del 90 % de la inicial hasta el paso 5 (25% de los píxeles),
+cae a la mitad en el paso 8 y el salto más grande (0.259) ocurre en el paso 9, cuando se borran
+las celdas que cubren el animal. Con órdenes aleatorios la probabilidad decae de forma suave desde el primer paso (0.995 → 0.901) y cae a la mitad en el paso
+3 a 4: los píxeles grises dispersos funcionan como ruido sobre toda la imagen y destruyen la textura que usa la red, aunque no borren ninguna región completa.
+Por eso el azar resulta más "eficaz" en deletion que el mapa. En insertion ocurre lo contrario: unos pocos píxeles nítidos dispersos sobre la imagen desenfocada no
+reconstruyen nada (la curva aleatoria de (a) sigue en 0.000 a la mitad de los pasos), mientras que el mapa inserta regiones enteras del objeto
+(0.316 en el paso 2). En (b) y (c) la probabilidad inicial ya es baja (0.445 y 0.205) y cualquier orden la lleva casi a cero en el primer paso, de modo que AUC_del queda dominada por ese piso y discrimina poco.
+
+**Efecto de los parches grises (imagen (a)).** Se repitió deletion reemplazando los píxeles por los de la imagen desenfocada en lugar de gris:
+
+| Referencia | AUC_del Grad-CAM | AUC_del azar (media ± desv.) | Desviaciones a favor del mapa |
+|---|---|---|---|
+| Gris | 0.3346 | 0.1308 ± 0.0181 | -11.3 |
+| Desenfocada (σ = 10) | 0.3413 | 0.2376 ± 0.0211 | -4.9 |
+
+![Figura 24. Deletion de la imagen (a) con referencia gris y con referencia desenfocada, frente al azar.](outputs/task4/figures/fig_4_3a_blur_reference.png)
+
+*Figura 24. Deletion de la imagen (a) con referencia gris y con referencia desenfocada, frente al azar.*
+
+Con la referencia desenfocada, el AUC_del del mapa cambia +0.0067 y el del azar +0.1068: los parches grises castigan
+sobre todo al orden aleatorio, porque introducen bordes artificiales que la red no vio en el entrenamiento. La desventaja del mapa se reduce de 11.3 a
+4.9 desviaciones estándar, pero no desaparece: aun con desenfoque, cambiar píxeles dispersos degrada la textura de toda la imagen. Por eso
+deletion con órdenes aleatorios a nivel de píxel no es una referencia justa para un mapa de 7×7; insertion, o un azar que permute celdas de 32×32,
+mide mejor la calidad del mapa.
+
+### (b) Sensibilidad a los parámetros del modelo
+
+Etapa en la que el Spearman cae por primera vez por debajo de 0.3: (a) etapa 2 (`layer4`), (b) etapa 1 (`fc`), (c) etapa 2 (`layer4`).
+
+**Predicción.** En ResNet-18, α_k^c = w_k^c / Z, de modo que L^c = ReLU(Σ_k w_k^c A^k / Z). Si sólo se aleatoriza `fc`, las activaciones A de `layer4`
+no cambian (diferencia máxima medida: 0.0e+00) y el nuevo mapa es exactamente Σ_k w_k^rand A^k / Z: una combinación con pesos al azar
+de los mismos 512 mapas de activación. Debería perder la relación con la clase y conservar sólo la estructura espacial común a todos los canales
+(dónde hay activación en general), así que la correlación con el original debería caer muy por debajo de 1 y quedar con un signo y una magnitud
+que dependen del sorteo de los pesos.
+
+**Comparación con la etapa 1.** La identidad se cumple con error máximo de 9.3e-09 entre el mapa calculado y Σ_k w_k^rand A^k / Z. Los Spearman
+de la etapa 1 son (a) +0.389, (b) -0.214, (c) +0.448, todos lejos de 1. Lo que queda de correlación sale de la estructura común: el
+Spearman entre el mapa original y la suma sin pesos Σ_k A^k es (a) +0.967, (b) +0.313, (c) +0.907, y la suma de los pesos
+aleatorios de la clase es (a) +0.505, (b) -0.435, (c) +0.074. En (a) y (c) la suma de pesos aleatorios es positiva y el mapa original se parece a Σ_k A^k, así que el mapa aleatorio conserva una correlación positiva con el original. En (b) la suma es negativa y la correlación también lo es. Grad-CAM **pasa** la prueba de aleatorización: el mapa depende
+de los parámetros que la red aprendió, y desde la etapa 2 la correlación queda por debajo de 0.3 en las tres imágenes. Aun así, la etapa 1 muestra
+un riesgo práctico: con una capa final al azar el mapa puede seguir marcando el objeto, sólo porque ahí se concentra la activación, y verse
+"plausible" sin decir nada sobre la clase.
+
+### (c) Explicaciones para distintas audiencias
+
+| Audiencia | Qué se entrega | Validaciones con números propios | Qué **no** se entrega |
+|---|---|---|---|
+| Persona solicitante | Las razones principales del rechazo en lenguaje llano a partir de SHAP (en el cliente rechazado: `duration` = 36 (-0.93), `savings_status` = no known savings (+0.88), `other_payment_plans` = bank (-0.81)) y un contrafactual accionable del 3.4 (checking_status de 0<=X<200 a no checking; duration de 36 a 30; credit_amount de 3990 a 3780; P(good) pasa de 0.087 a 0.530), sin cambiar variables inmutables. | El contrafactual se comprueba con el propio modelo (P(good) ≥ 0.5) y sólo cambia variables accionables; las razones SHAP suman exactamente el puntaje (error de eficiencia 9.7e-08). | Coeficientes de LIME (R²_w máximo 0.301 y top-5 inestable), códigos ordinales, el modelo o umbrales internos, ni contrafactuales que toquen `age`, `personal_status` o `foreign_worker`. |
+| Oficial de cumplimiento interno | SHAP local de cada decisión y SHAP global (importancia media \|φ\|) junto con la importancia por permutación; contrafactuales para revisar si las acciones sugeridas son razonables. | Eficiencia 9.7e-08; valor base igual al promedio del fondo (diferencia 0.0e+00); Spearman entre importancias 0.645; Shapley exacto propio contra TreeSHAP con error 2.4e-08; KernelSHAP con MAE 0.030 respecto de TreeSHAP; LIME con Jaccard de 0.70 a 0.94 según N y σ_rel (hacen falta unas 3600 muestras para 0.9). | LIME como justificación de una decisión (no alcanza R²_w ≥ 0.8) ni importancias individuales de variables correlacionadas sin agruparlas (con una copia ruidosa, la original se queda con 54% del crédito). |
+| Regulador | Documentación del modelo y del método: datos, codificación (ordinal, con su limitación), desempeño (AUC 0.765, exactitud 0.775), importancia global SHAP y por permutación, y el protocolo de explicaciones individuales con sus pruebas. | Todas las verificaciones numéricas anteriores, el reparto del crédito entre variables duplicadas (2.3), la estabilidad de LIME (3.2) y la validación de Grad-CAM del Task 4 como ejemplo de que una explicación debe compararse con el azar y pasar la prueba de aleatorización. | Explicaciones aisladas sin su validación, ni una sola corrida de LIME o una sola semilla presentadas como si fueran estables. |
+
+**Contrafactuales en un sistema de detección de lavado (Proyecto 2).** Un contrafactual como el del 3.4 le dice a quien es evaluado qué cambio mínimo
+haría que el modelo cambiara de decisión. En crédito eso es deseable porque el cambio (pedir menos monto o plazo) es legítimo. En detección
+de lavado, la persona evaluada puede ser el adversario: "si la transferencia fuera menor que X o se repartiera en N operaciones no se
+marcaría" es una receta para evadir el modelo (fraccionamiento, cambio de contrapartes), y repetir consultas permite reconstruir la frontera de
+decisión. Además, avisar al cliente de que está siendo investigado está prohibido en la normativa antilavado (*tipping off*). En su lugar se
+entregaría al cliente sólo una notificación genérica del resultado y el canal de revisión, y las explicaciones SHAP locales y globales se
+reservarían para los analistas y el oficial de cumplimiento, con registro de accesos y sin publicar umbrales ni contrafactuales.
+
+**Prompt utilizado**
+
+Con el enunciado del Laboratorio 10 y el repositorio (Grad-CAM propio del Task 1 en `gradcam.py`), implementa el Task 4 con la
+misma estructura que los demás (`task4.py`, `viz_task4.py`, `console_task4.py`, `report_task4.py` y `scripts/run_task4.py`), sin
+`pytorch-grad-cam` ni `captum`. En 4.1 ordena los 224×224 píxeles por el mapa normalizado de la clase top-1; en P = 20 pasos reemplaza por gris
+medio (deletion) o inserta sobre la imagen desenfocada con σ = 10 (insertion) la fracción k/P, trabajando en [0, 1] y normalizando justo antes
+del modelo, y compara con 10 órdenes aleatorios con semilla. En 4.2 reinicializa con `reset_parameters` de PyTorch, de forma acumulada, `fc`,
+`layer4`, `layer3`, `layer2`, `layer1` y `conv1`, y calcula el Spearman entre mapas de 7×7 de la clase original. Para 4.3 corre los
+experimentos que piden los incisos (deletion de (a) con referencia desenfocada y la comprobación de que, con sólo `fc` aleatorio, el mapa es
+Σ_k w_k A^k / Z con las activaciones originales) y usa los números de los Tasks 2 y 3 para la parte de audiencias. Imprime verificaciones
+numéricas con tolerancia.
+
+**Por qué funcionó este prompt**
+
+Nombrar el espacio de píxeles ([0, 1] antes de normalizar), el gris, el desenfoque y las semillas evitó ambigüedades que cambian las
+curvas, y exigir comparación contra órdenes aleatorios convirtió cada AUC en una cifra interpretable. Pedir la comprobación de α = w/Z en la
+primera etapa de la cascada transformó la "predicción" del 4.3(b) en una prueba numérica (error del orden de 1e-8), y obligar a usar los
+números de los Tasks 2 y 3 en 4.3(c) evitó recomendaciones genéricas para cada audiencia.
+
+<!-- INFORME_TASK4:FIN -->
