@@ -1,4 +1,4 @@
-"""Experiments of Task 3 (LIME from scratch): 3.1 explanations of three clients and 3.2 stability."""
+"""Experiments of Task 3: LIME from scratch (3.1, 3.2) and its comparison with SHAP (3.3)."""
 
 from __future__ import annotations
 
@@ -10,7 +10,9 @@ from itertools import combinations
 
 import numpy as np
 import pandas as pd
+import shap
 import sklearn
+from scipy.stats import spearmanr
 from sklearn.linear_model import Ridge
 
 from . import config, credit, lime_tabular as lt
@@ -50,13 +52,14 @@ def run_task3(seed: int = config.SEED) -> Task3Run:
            "sigma_rel": config.LIME_SIGMA_REL, "d_prime": config.LIME_D_PRIME,
            "sigma": config.LIME_SIGMA_REL * float(np.sqrt(config.LIME_D_PRIME)), "intercept_penalized": False}
     res: dict = {"environment": {"seed": seed, "python": platform.python_version(), "sklearn": sklearn.__version__,
-                                 "numpy": np.__version__, "pandas": pd.__version__}, "config": cfg}
+                                 "shap": shap.__version__, "numpy": np.__version__, "pandas": pd.__version__}, "config": cfg}
 
     # ---- 3.1 ------------------------------------------------------------------------------
     t31: dict = {}
+    lime_runs: dict[str, lt.LimeResult] = {}
     for key, pos in clients.items():
         row = sp.X_test.iloc[pos]
-        r = lt.explain(row.to_numpy(), predict, X_train, names, seed=seed)
+        r = lime_runs[key] = lt.explain(row.to_numpy(), predict, X_train, names, seed=seed)
         t31[key] = {
             "test_position": pos, "p_good": float(p_test[pos]), "intercept": r.intercept, "r2w": r.r2w, "n_eff": r.n_eff,
             "top": [{"feature": f, "value": d.decode(f, row[f]), "coef": float(c)} for f, c in zip(r.features, r.coefs)],
@@ -87,5 +90,48 @@ def run_task3(seed: int = config.SEED) -> Task3Run:
     res["t3_2"] = {"client": "rechazado", "test_position": pos, "n_values": list(config.LIME_STAB_N),
                    "sigma_rel_values": list(config.LIME_STAB_SIGMA_REL), "seeds": seeds, "k": config.LIME_K,
                    "lambda": config.LIME_LAMBDA, "jaccard": jac, "n_eff": neff, "cells": cells}
+
+    # ---- 3.3 ------------------------------------------------------------------------------
+    # SHAP exactly as in Task 2.2 (interventional TreeSHAP, 100-row background, log-odds); the probability-scale
+    # version is only used in 3.5(b) to separate the effect of the output scale from that of the method.
+    tree = shap.TreeExplainer(model, data=base.background, feature_perturbation="interventional", model_output="raw")
+    tree_p = shap.TreeExplainer(model, data=base.background, feature_perturbation="interventional", model_output="probability")
+    rows = sp.X_test.iloc[list(clients.values())]
+    phi = dict(zip(clients, np.asarray(tree.shap_values(rows, check_additivity=False))))
+    phi_p = dict(zip(clients, np.asarray(tree_p.shap_values(rows, check_additivity=False))))
+    res["t3_3"] = _t3_3(clients, lime_runs, phi, phi_p, names, x, predict, X_train, seed)
+
     res["time_s"] = time.perf_counter() - t0
     return Task3Run(res)
+
+
+def _ranks(v: np.ndarray) -> np.ndarray:
+    """Rank 1 = largest |v| (ties broken by column order)."""
+    r = np.empty(len(v), dtype=int)
+    r[np.argsort(-np.abs(v), kind="stable")] = np.arange(1, len(v) + 1)
+    return r
+
+
+def _t3_3(clients, lime_runs, phi, phi_p, names, x_rej, predict, X_train, seed) -> dict:
+    """(a) Spearman between |w| (LIME on all 20 variables) and |phi| (TreeSHAP 2.2) and top-3 overlap; (b) R^2_w vs K."""
+    top = config.TOP_COMPARE
+    a = {}
+    for key in clients:
+        w, f, fp = lime_runs[key].full_coefs, phi[key], phi_p[key]
+        top_w = [names[j] for j in np.argsort(-np.abs(w), kind="stable")[:top]]
+        top_f = [names[j] for j in np.argsort(-np.abs(f), kind="stable")[:top]]
+        a[key] = {
+            "spearman": float(spearmanr(np.abs(w), np.abs(f)).statistic),
+            "spearman_vs_shap_probability": float(spearmanr(np.abs(w), np.abs(fp)).statistic),
+            "top_lime": top_w, "top_shap": top_f, "top_overlap": len(set(top_w) & set(top_f)),
+            "lime_w": {n: float(v) for n, v in zip(names, w)},
+            "shap_phi": {n: float(v) for n, v in zip(names, f)},
+            "shap_phi_probability": {n: float(v) for n, v in zip(names, fp)},
+            "rank_lime": {n: int(r) for n, r in zip(names, _ranks(w))},
+            "rank_shap": {n: int(r) for n, r in zip(names, _ranks(f))},
+        }
+    b = []
+    for k in config.LIME_K_VALUES:
+        r = lt.explain(x_rej, predict, X_train, names, k=k, seed=seed)  # same seed -> same 5000 samples for every K
+        b.append({"k": k, "r2w": r.r2w, "features": r.features})
+    return {"a": a, "b": {"client": "rechazado", "by_k": b}}

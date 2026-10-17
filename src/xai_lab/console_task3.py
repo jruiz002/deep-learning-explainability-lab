@@ -54,6 +54,14 @@ def render_console(results: dict, figures: list[str], elapsed: float) -> tuple[s
     L += ["", " N_ef medio (filas N, columnas sigma_rel):"]
     L += _table(["N", *[f"{s:g}" for s in srs]], [[str(n), *[f"{v:.1f}" for v in row]] for n, row in zip(ns, t2["n_eff"])])
 
+    if "t3_3" in results:
+        a, b = results["t3_3"]["a"], results["t3_3"]["b"]
+        L += _title("Task 3.3  LIME frente a SHAP")
+        L += [""] + _table(["Cliente", "Spearman", "Top-3 LIME", "Top-3 SHAP", "Comunes"],
+                           [[k, f"{c['spearman']:.3f}", ", ".join(c["top_lime"]), ", ".join(c["top_shap"]), f"{c['top_overlap']}/3"]
+                            for k, c in a.items()], "lrllr")
+        L += ["", " R2_w del cliente rechazado según K:"] + _table(["K", "R2_w"], [[str(r["k"]), f"{r['r2w']:.4f}"] for r in b["by_k"]])
+
     checks = collect_checks(results)
     L += _title("Verificaciones numéricas")
     L += [""] + _table(["Verificación", "Peor caso", "Tolerancia", "Estado"],

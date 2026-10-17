@@ -137,6 +137,7 @@ Cliente rechazado (posición {t2['test_position']}); para cada combinación de N
 {fig("fig_3_2_stability.png", "Jaccard medio y tamaño efectivo de muestra N_ef según N y σ_rel (cliente rechazado).")}
 {n_txt}{s_txt}; el valor más alto es {_f(best[0])} (N = {best[1]}, σ_rel = {best[2]:g}) y el más bajo {_f(worst[0])} (N = {worst[1]}, σ_rel = {worst[2]:g}). {e_txt}
 
+{_render_3_3(results, fig)}
 **Prompt utilizado**
 
 {PROMPT}
@@ -144,4 +145,46 @@ Cliente rechazado (posición {t2['test_position']}); para cada combinación de N
 **Por qué funcionó este prompt**
 
 {WHY}
+"""
+
+
+# Markdown headers with literal "|" (escaped), kept outside f-string expressions for Python < 3.12
+H_3_3A = ["Cliente", "p(good)", "Spearman \\|w\\| vs \\|φ\\|", "Spearman vs \\|φ\\| (probabilidad)", "Top-3 LIME", "Top-3 SHAP", "Coincidencia"]
+
+
+def _render_3_3(results: dict, fig) -> str:
+    a, b = results["t3_3"]["a"], results["t3_3"]["b"]
+    t1 = results["t3_1"]
+    rows = [[k, _f(t1[k]["p_good"]), _f(c["spearman"]), _f(c["spearman_vs_shap_probability"]), _join(c["top_lime"]),
+             _join(c["top_shap"]), f"{c['top_overlap']}/3"] for k, c in a.items()]
+    rho = {k: c["spearman"] for k, c in a.items()}
+    lo, hi = min(rho, key=rho.get), max(rho, key=rho.get)
+    full = [k for k, c in a.items() if c["top_overlap"] == 3]
+    part = [f"{k} ({c['top_overlap']}/3: LIME pone {_join(sorted(set(c['top_lime']) - set(c['top_shap'])))} y SHAP "
+            f"{_join(sorted(set(c['top_shap']) - set(c['top_lime'])))})" for k, c in a.items() if c["top_overlap"] < 3]
+    by_k = b["by_k"]
+    t_k = _table(["K", "R²_w", "Variables añadidas respecto del K anterior"],
+                 [[str(r["k"]), _f(r["r2w"]), _join(r["features"][len(prev["features"]) if prev else 0:])]
+                  for prev, r in zip([None, *by_k[:-1]], by_k)])
+    r2 = [r["r2w"] for r in by_k]
+    gains = [f"{_sg(r2[i + 1] - r2[i])} de K = {by_k[i]['k']} a {by_k[i + 1]['k']}" for i in range(len(r2) - 1)]
+    return f"""## Task 3.3 - Comparación de LIME con SHAP
+
+### (a) Ranking y coincidencia de variables
+
+Spearman entre |w| de LIME (primer ajuste, 20 variables, misma semilla que en 3.1) y |φ| de TreeSHAP interventional del Task 2.2
+(mismo modelo y mismo fondo de 100 filas), y coincidencia entre las tres variables principales de cada método. Como LIME explica P(good)
+y SHAP el log-odds, se agrega como control la correlación con |φ| calculado por TreeSHAP sobre la probabilidad.
+
+{chr(10).join(_table(H_3_3A, rows))}
+La correlación va de {_f(rho[lo])} (cliente {lo}) a {_f(rho[hi])} (cliente {hi}): ambos métodos ordenan las variables de forma parecida.
+{("El top-3 coincide por completo en " + " y ".join(full) + ". ") if full else ""}{("Difiere en " + "; ".join(part) + ".") if part else ""}
+
+### (b) Fidelidad según el número de variables (cliente rechazado)
+
+{chr(10).join(t_k)}
+{fig("fig_3_3_lime_vs_shap.png", "|w| de LIME contra |φ| de TreeSHAP por cliente y R²_w del cliente rechazado según K.")}
+R²_w crece con K ({"; ".join(gains)}), pero incluso con las 20 variables el modelo lineal en z' explica sólo {r2[-1]:.1%} de la varianza
+ponderada de P(good). El límite no lo pone K sino la forma del modelo sustituto: un modelo aditivo en presencia/ausencia no puede
+representar las interacciones del modelo de árboles (ver 3.5(b)).
 """

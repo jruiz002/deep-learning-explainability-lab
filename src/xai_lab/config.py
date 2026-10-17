@@ -73,3 +73,7 @@ LIME_STAB_RUNS = 20  # seeds 0..19 in every cell of the grid
 LIME_STAB_TOP = 5  # how many frequent variables are stored per cell
 
 TOL_LIME = 1e-8  # closed-form ridge vs lstsq / sklearn Ridge (float64; errors are far below this)
+
+# 3.3 LIME vs SHAP and fidelity as a function of K
+LIME_K_VALUES = (3, 5, 10, 20)
+TOP_COMPARE = 3  # size of the "top variables" sets compared between LIME and SHAP

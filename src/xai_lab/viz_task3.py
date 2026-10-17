@@ -48,3 +48,33 @@ def fig_stability(results: dict, out: Path) -> Path:
     _heatmap(axes[1], t["n_eff"], t["n_values"], t["sigma_rel_values"], "$N_{ef}$ medio (20 corridas)", ".0f")
     fig.tight_layout()
     return _save(fig, out)
+
+
+def fig_lime_vs_shap(results: dict, out: Path) -> Path:
+    """3.3: |w| of LIME (20 variables) against |phi| of TreeSHAP per client, plus R^2_w as a function of K."""
+    a, b = results["t3_3"]["a"], results["t3_3"]["b"]
+    fig, axes = plt.subplots(1, len(a) + 1, figsize=(4.0 * (len(a) + 1), 3.7))
+    for ax, (key, c) in zip(axes, a.items()):
+        names = list(c["lime_w"])
+        xs = np.array([abs(c["shap_phi"][n]) for n in names])
+        ys = np.array([abs(c["lime_w"][n]) for n in names])
+        ax.scatter(xs, ys, s=16, color=ACCENT, alpha=0.75)
+        for n in set(c["top_lime"]) | set(c["top_shap"]):
+            i = names.index(n)
+            ax.annotate(n, (xs[i], ys[i]), fontsize=7, xytext=(3, 2), textcoords="offset points", color=INK)
+        ax.set_xlabel("|φ| TreeSHAP (log-odds)")
+        ax.set_ylabel("|w| LIME (P(good))")
+        ax.set_title(f"{key}: Spearman = {c['spearman']:.3f}, top-3 común = {c['top_overlap']}", fontsize=8.5)
+    ks = [r["k"] for r in b["by_k"]]
+    r2 = [r["r2w"] for r in b["by_k"]]
+    ax = axes[-1]
+    ax.plot(ks, r2, marker="o", color=ACCENT)
+    for k, v in zip(ks, r2):
+        ax.annotate(f"{v:.3f}", (k, v), fontsize=8, xytext=(0, 6), textcoords="offset points", ha="center")
+    ax.set_xticks(ks)
+    ax.set_ylim(0, max(r2) * 1.3)
+    ax.set_xlabel("K (variables del modelo lineal)")
+    ax.set_ylabel("$R^2_w$")
+    ax.set_title("Cliente rechazado: fidelidad según K", fontsize=8.5)
+    fig.tight_layout()
+    return _save(fig, out)
